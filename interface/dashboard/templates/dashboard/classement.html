@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Classement{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-xl-10">
+
+            <!-- En-tête -->
+            <div class="text-center mb-4">
+                <h1 class="display-4 mb-2">🏆 Classement des joueurs</h1>
+                <p class="text-muted">Les meilleurs scores de prédiction de température</p>
+            </div>
+
+            <!-- Podium des 3 premiers -->
+            {% if entries %}
+            <div class="row g-3 mb-4">
+                {% for entry in entries|slice:":3" %}
+                    <div class="col-12 col-md-4">
+                        <div class="card shadow-sm h-100 {% if forloop.counter == 1 %}border-warning{% elif forloop.counter == 2 %}border-secondary{% elif forloop.counter == 3 %}border-danger{% endif %}" style="border-width: 2px;">
+                            <div class="card-body text-center">
+                                <div class="display-1 mb-2">
+                                    {% if forloop.counter == 1 %}🥇
+                                    {% elif forloop.counter == 2 %}🥈
+                                    {% elif forloop.counter == 3 %}🥉
+                                    {% endif %}
+                                </div>
+                                <h3 class="h5 fw-bold">{{ entry.pseudo }}</h3>
+                                <p class="display-6 text-primary mb-2">{{ entry.points }} pts</p>
+                                <small class="text-muted">{{ entry.created_at|date:"d/m/Y à H:i" }}</small>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Tableau complet -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Tous les résultats</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped mb-0">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th class="text-center" style="width: 80px;">#</th>
+                                    <th>Pseudo</th>
+                                    <th class="text-center" style="width: 100px;">Points</th>
+                                    <th>Prédictions (°C)</th>
+                                    <th>Températures max (°C)</th>
+                                    <th style="width: 150px;">Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            {% for entry in entries %}
+                                <tr {% if forloop.counter <= 3 %}class="table-{% if forloop.counter == 1 %}warning{% elif forloop.counter == 2 %}secondary{% else %}danger{% endif %} fw-bold"{% endif %}>
+                                    <td class="text-center">
+                                        <span class="badge {% if forloop.counter == 1 %}bg-warning text-dark{% elif forloop.counter == 2 %}bg-secondary{% elif forloop.counter == 3 %}bg-danger{% else %}bg-light text-dark{% endif %}">
+                                            {{ forloop.counter }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <strong>{{ entry.pseudo }}</strong>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-primary fs-6">{{ entry.points }} pts</span>
+                                    </td>
+                                    <td>
+                                        <small>
+                                        {% for pi, temp in entry.predicted_temps.items %}
+                                            <div class="mb-1">
+                                                <span class="text-muted">{{ pi }}:</span>
+                                                <strong>{{ temp|default:"—"|floatformat:1 }}</strong>
+                                            </div>
+                                        {% endfor %}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <small>
+                                        {% for pi, temp in entry.max_temps.items %}
+                                            <div class="mb-1">
+                                                <span class="text-muted">{{ pi }}:</span>
+                                                <strong>{{ temp|default:"—"|floatformat:1 }}</strong>
+                                            </div>
+                                        {% endfor %}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">{{ entry.created_at|date:"d/m/Y H:i" }}</small>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-5 text-muted">
+                                        <div class="mb-2">🎮</div>
+                                        Aucune entrée pour le moment. Soyez le premier à jouer !
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Pagination -->
+                {% if is_paginated %}
+                <div class="card-footer">
+                    <nav aria-label="Navigation du classement">
+                        <ul class="pagination justify-content-center mb-0">
+                            {% if page_obj.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
+                                        <span aria-hidden="true">&laquo;</span> Précédent
+                                    </a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">&laquo; Précédent</span>
+                                </li>
+                            {% endif %}
+
+                            {% for num in page_obj.paginator.page_range %}
+                                {% if page_obj.number == num %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ num }}</span>
+                                    </li>
+                                {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if page_obj.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.next_page_number }}">
+                                        Suivant <span aria-hidden="true">&raquo;</span>
+                                    </a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">Suivant &raquo;</span>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Lien pour jouer -->
+            <div class="text-center mt-4">
+                <a href="{% url 'game' %}" class="btn btn-success btn-lg">
+                    🎮 Jouer maintenant
+                </a>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<style>
+    .table th {
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        letter-spacing: 0.5px;
+    }
+
+    .sticky-top {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    .card-header {
+        font-weight: 600;
+    }
+</style>
+{% endblock %}

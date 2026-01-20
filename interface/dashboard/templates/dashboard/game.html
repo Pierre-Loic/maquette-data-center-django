@@ -1,0 +1,635 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Jeu des températures – Raspberry Pi{% endblock %}
+
+{% block content %}
+<style>
+    html, body {
+        height: 100%;
+        overflow: hidden;
+    }
+
+    body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    /* Force la page à sortir du conteneur parent et prendre toute la largeur */
+    main.flex-grow-1 {
+        padding: 0 !important;
+    }
+
+    main.flex-grow-1 > div {
+        padding: 0 !important;
+        max-width: 100% !important;
+    }
+
+    .dashboard {
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .dashboard-main {
+        flex: 1 1 auto;
+    }
+
+    .card-fullheight {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .card-fullheight .card-body-scroll {
+        flex: 1 1 auto;
+        overflow: auto;
+    }
+
+    .rpi-blocks-container {
+        margin-top: 0.5rem;
+    }
+
+    .rpi-block h3 {
+        margin-bottom: 0.25rem;
+    }
+
+    .rpi-max-temp {
+        font-size: 0.9rem;
+        font-style: italic;
+        margin-top: 0.1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    pre.rpi-response {
+        background: #f8f9fa;
+        padding: 0.5rem;
+        border-radius: 0.5rem;
+        overflow-x: auto;
+        margin-bottom: 0;
+    }
+
+    .model-buttons .model-btn {
+        margin-right: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .model-btn.active {
+        box-shadow: 0 0 0 0.2rem rgba(13,110,253,0.25);
+    }
+
+    .chart-wrapper {
+        flex: 0 0 50%;
+        min-height: 200px;
+        max-height: 600px;
+    }
+
+    #tempChart {
+        width: 100% !important;
+        height: 100% !important;
+    }
+
+    .rpi-blocks-scroll {
+        flex: 1 1 auto;
+        max-height: none;
+        overflow: auto;
+    }
+
+    #countdownValue {
+        font-variant-numeric: tabular-nums;
+    }
+
+    .rpi-block.card {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .rpi-block .card-body {
+        display: flex;
+        flex-direction: column;
+    }
+
+    pre.rpi-response {
+        background: #f8f9fa;
+        padding: 0.5rem;
+        border-radius: 0.5rem;
+        margin-bottom: 0;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        flex: 1 1 auto;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+</style>
+
+<div class="dashboard">
+    <div class="dashboard-main container-fluid py-2">
+        <div class="row h-100 g-3">
+
+            <!-- ======================= GRAPHIQUE ======================= -->
+            <div class="col-lg-8 d-flex">
+                <div class="card card-fullheight shadow-sm w-100">
+                    <div class="card-body d-flex flex-column">
+                        <div class="mb-2">
+                            <h2 class="h5 card-title mb-1">Températures en temps réel</h2>
+                            <p class="text-muted mb-0">Actualisation toutes les 2 secondes.</p>
+                        </div>
+
+                        <div class="chart-wrapper mb-2">
+                            <canvas id="tempChart"></canvas>
+                        </div>
+
+                        <div id="rpiBlocksContainer"
+                             class="rpi-blocks-container rpi-blocks-scroll row row-cols-1 row-cols-md-2 g-2">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ======================= FORMULAIRE DU JEU ======================= -->
+            <div class="col-lg-4 d-flex">
+                <div class="card card-fullheight shadow-sm w-100">
+                    <div class="card-body card-body-scroll">
+                        <h2 class="h5 card-title mb-3">Votre prédiction</h2>
+
+                        <form id="gameForm" novalidate>
+                            <div class="mb-3">
+                                <label for="playerName" class="form-label">Prénom du joueur</label>
+                                <input type="text" id="playerName" class="form-control" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label d-block">Choix du modèle</label>
+                                <div class="model-buttons btn-group" role="group" aria-label="Choix du modèle">
+                                    <button type="button" class="model-btn btn btn-outline-primary active" data-model="petit">
+                                        Petit modèle<br>
+                                        (gemma3:270m)
+                                    </button>
+                                    <button type="button" class="model-btn btn btn-outline-primary" data-model="moyen" disabled>
+                                        Moyen modèle<br>
+                                        (falcon3:1b)
+                                    </button>
+                                    <button type="button" class="model-btn btn btn-outline-primary" data-model="grand" disabled>
+                                        Grand modèle<br>
+                                        (qwen3:1.7b)
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Températures maximales prévues (°C)</label>
+                                <div class="row g-2">
+                                    {% for name in raspberries %}
+                                        <div class="col-12">
+                                            <label for="pred-{{ forloop.counter }}" class="form-label">
+                                                {{ name }}
+                                            </label>
+                                            <input type="number"
+                                                   step="0.1"
+                                                   id="pred-{{ name }}"
+                                                   class="form-control"
+                                                   data-name="{{ name }}"
+                                                   required>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="prompt" class="form-label">Prompt pour Ollama</label>
+                                <select id="prompt" class="form-select" required>
+                                    <option value="">-- Choisissez un prompt --</option>
+                                    <option value="Quel mot définit le mieux Grenoble ?">📝 Grenoble en un mot</option>
+                                    <option value="De quand date le téléphérique de la Bastille ?">⚡ Téléphérique Bastille</option>
+                                    <option value="Écris un poème sur une IA qui essaie de skier à l'Alpe d'Huez mais qui tombe tout le temps.">❄️ Poème IA ski</option>
+                                    <option value="Raconte l'histoire d'un robot qui se perd dans les ruelles du vieux Grenoble et qui demande son chemin à ChatGPT.">🤖 Robot perdu Grenoble</option>
+                                </select>
+
+                                <!-- Affichage du prompt sélectionné -->
+                                <div id="promptPreview" class="mt-2 p-2 bg-light border rounded d-none">
+                                    <small class="text-muted d-block mb-1">Prompt qui sera envoyé :</small>
+                                    <div id="promptPreviewText" class="small fst-italic"></div>
+                                </div>
+                            </div>
+
+                            <button type="submit" id="submitBtn" class="btn btn-success w-100">
+                                Lancer le jeu
+                            </button>
+
+                            <div id="countdownTimer" class="mt-3 d-none text-center">
+                                <div class="fw-semibold small text-muted mb-1">Temps restant</div>
+                                <div id="countdownValue" class="display-6 lh-1">-- s</div>
+                                <div class="progress mt-2" style="height: 0.5rem;">
+                                    <div id="countdownProgress"
+                                         class="progress-bar"
+                                         role="progressbar"
+                                         style="width: 0%;"
+                                         aria-valuemin="0"
+                                         aria-valuemax="100"
+                                         aria-valuenow="0">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="gameStatus" class="mt-3 text-wrap small"></div>
+                            <div id="ollamaResponses" class="mt-2 small text-muted"></div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // ----------------------- GRAPH -----------------------
+    const ctx = document.getElementById('tempChart').getContext('2d');
+    const labels = [];
+
+    const raspberries = {{ raspberries|safe }};
+
+    const COLORS = [
+        '#e74c3c',
+        '#3498db',
+        '#2ecc71',
+        '#9b59b6',
+        '#f1c40f',
+        '#e67e22',
+    ];
+
+    const datasets = raspberries.map((name, idx) => ({
+        label: name,
+        data: [],
+        borderColor: COLORS[idx % COLORS.length],
+        backgroundColor: COLORS[idx % COLORS.length] + '33',
+        tension: 0.2,
+        pointRadius: 2,
+        borderWidth: 2,
+    }));
+
+    const config = {
+        type: 'line',
+        data: { labels: labels, datasets: datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { title: { display: true, text: 'Température (°C)' } },
+                x: { title: { display: true, text: 'Temps' } }
+            }
+        }
+    };
+
+    const tempChart = new Chart(ctx, config);
+
+    const rpiBlocksContainer = document.getElementById('rpiBlocksContainer');
+    const rpiBlocks = {};
+
+    raspberries.forEach((name) => {
+        const col = document.createElement('div');
+        col.className = 'col';
+        col.innerHTML = `
+            <div class="rpi-block card h-100">
+                <div class="card-body p-2">
+                    <h3 class="h6">${name}</h3>
+                    <p class="rpi-max-temp text-muted">Température max pendant l'inférence : -- °C</p>
+                    <h4 class="h6">Réponse d'Ollama</h4>
+                    <pre class="rpi-response">(en attente...)</pre>
+                </div>
+            </div>
+        `;
+        rpiBlocksContainer.appendChild(col);
+        rpiBlocks[name] = col.querySelector('.rpi-block');
+    });
+
+    function resetMaxTempDisplay() {
+        raspberries.forEach((name) => {
+            const block = rpiBlocks[name];
+            if (!block) return;
+            const p = block.querySelector('.rpi-max-temp');
+            p.textContent = "Température max pendant l'inférence : -- °C";
+        });
+    }
+
+    function updateMaxTempsFromBackend(actualTemps) {
+        if (!actualTemps) return;
+        for (const name of raspberries) {
+            const block = rpiBlocks[name];
+            if (!block) continue;
+            const p = block.querySelector('.rpi-max-temp');
+            const value = actualTemps[name];
+            if (value == null) {
+                p.textContent = "Température max pendant l'inférence : N/A";
+            } else {
+                p.textContent = `Température max pendant l'inférence : ${value.toFixed(1)} °C`;
+            }
+        }
+    }
+
+    async function fetchTemperatures() {
+        try {
+            const response = await fetch('{% url "api_temperatures" %}');
+            const json = await response.json();
+
+            labels.push(json.timestamp);
+            if (labels.length > 50) labels.shift();
+
+            config.data.datasets.forEach((dataset) => {
+                const name = dataset.label;
+                const temp = json.temperatures[name];
+                dataset.data.push(temp);
+                if (dataset.data.length > 50) dataset.data.shift();
+            });
+
+            tempChart.update();
+        } catch (err) {
+            console.error('Erreur en récupérant les températures:', err);
+        }
+    }
+
+    fetchTemperatures();
+    setInterval(fetchTemperatures, 2000);
+
+    // ----------------------- JEU + COMPTE À REBOURS + CLASSEMENT -----------------------
+    const gameForm = document.getElementById('gameForm');
+    const gameStatusDiv = document.getElementById('gameStatus');
+    const ollamaResponsesDiv = document.getElementById('ollamaResponses');
+
+    const countdownTimerDiv = document.getElementById('countdownTimer');
+    const countdownValueSpan = document.getElementById('countdownValue');
+    const countdownProgressBar = document.getElementById('countdownProgress');
+
+    let gameInterval = null;
+    let countdownInterval = null;
+    let countdownEndTime = null;
+    let countdownTotal = null;
+
+    let currentPlayerName = '';
+
+    function renderOllamaResponses(responses) {
+        if (!responses) {
+            raspberries.forEach((name) => {
+                const block = rpiBlocks[name];
+                if (!block) return;
+                const pre = block.querySelector('.rpi-response');
+                pre.textContent = '(en attente...)';
+            });
+            if (ollamaResponsesDiv) {
+                ollamaResponsesDiv.textContent = '';
+            }
+            return;
+        }
+
+        raspberries.forEach((name) => {
+            const text = responses[name] ?? '(aucune réponse)';
+            const block = rpiBlocks[name];
+            if (!block) return;
+            const pre = block.querySelector('.rpi-response');
+            pre.textContent = text;
+        });
+
+        if (ollamaResponsesDiv) {
+            ollamaResponsesDiv.textContent = '';
+        }
+    }
+
+    function updateCountdownVisual() {
+        if (countdownEndTime == null || countdownTotal == null || !countdownTimerDiv) return;
+
+        const now = Date.now();
+        const remainingMs = countdownEndTime - now;
+        const remainingSec = Math.max(0, remainingMs / 1000);
+
+        const s = Math.round(remainingSec);
+        countdownValueSpan.textContent = s + ' s';
+
+        const elapsed = countdownTotal - remainingSec;
+        const ratio = Math.max(0, Math.min(1, elapsed / countdownTotal));
+        const percent = ratio * 100;
+
+        countdownProgressBar.style.width = percent + '%';
+        countdownProgressBar.setAttribute('aria-valuenow', percent.toFixed(0));
+    }
+
+    function startCountdown(totalSeconds) {
+        if (!totalSeconds || totalSeconds <= 0) {
+            stopCountdown();
+            countdownTimerDiv.classList.add('d-none');
+            countdownEndTime = null;
+            countdownTotal = null;
+            return;
+        }
+
+        countdownTotal = totalSeconds;
+        countdownEndTime = Date.now() + totalSeconds * 1000;
+
+        if (countdownInterval) clearInterval(countdownInterval);
+
+        countdownTimerDiv.classList.remove('d-none');
+        updateCountdownVisual();
+
+        countdownInterval = setInterval(() => {
+            updateCountdownVisual();
+            if (Date.now() >= countdownEndTime) {
+                stopCountdown();
+            }
+        }, 1000);
+    }
+
+    function stopCountdown() {
+        if (countdownInterval) {
+            clearInterval(countdownInterval);
+            countdownInterval = null;
+        }
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function renderResultsAndLeaderboard(json) {
+        let errorsHtml = '';
+        if (json.errors && typeof json.errors === 'object') {
+            errorsHtml += '<ul class="mb-3">';
+            for (const [name, err] of Object.entries(json.errors)) {
+                const txt = (err === null || err === undefined)
+                    ? 'N/A'
+                    : err.toFixed(2) + ' %';
+                errorsHtml += `<li><strong>${name}</strong> : ${txt}</li>`;
+            }
+            errorsHtml += '</ul>';
+        }
+
+        let rankingHtml = '';
+        // Utiliser le top3 reçu du backend
+        if (json.top3 && json.top3.length > 0) {
+            rankingHtml += '<p class="mb-1 fw-semibold">🏆 Meilleurs scores</p>';
+            rankingHtml += '<ol class="mb-0">';
+            json.top3.forEach((entry) => {
+                rankingHtml += `<li>${entry.name || 'Joueur'} – <strong>${entry.score} pts</strong></li>`;
+            });
+            rankingHtml += '</ol>';
+        }
+
+        const playerLabel = currentPlayerName || 'Joueur';
+
+        const html = `
+            <div class="alert alert-info mt-2 mb-0" role="alert">
+                <h5 class="alert-heading mb-2">Partie terminée 🎉</h5>
+                <p class="mb-1">
+                    <strong>${playerLabel}</strong>, votre score est de
+                    <strong>${json.score.toFixed(1)} points</strong>.
+                </p>
+                <p class="mb-2">Erreurs de température par Raspberry Pi (en %) :</p>
+                ${errorsHtml}
+                ${rankingHtml}
+            </div>
+        `;
+
+        gameStatusDiv.innerHTML = html;
+    }
+
+    const submitBtn = document.getElementById('submitBtn');
+
+    gameForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        // Désactiver le bouton
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Calcul en cours...';
+
+        const prompt = document.getElementById('prompt').value;
+        const predictions = {};
+        const playerNameInput = document.getElementById('playerName');
+        currentPlayerName = (playerNameInput.value || '').trim() || 'Joueur';
+
+        raspberries.forEach((name) => {
+            const input = document.querySelector(`input[data-name="${name}"]`);
+            if (input) {
+                predictions[name] = input.value;
+            }
+        });
+
+        try {
+            const csrftoken = getCookie('csrftoken');
+            const res = await fetch('{% url "api_start_game" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({
+                    prompt,
+                    predictions,
+                    player_name: currentPlayerName
+                })
+            });
+            const json = await res.json();
+
+            if (json.status === 'started') {
+                renderOllamaResponses(json.ollama_responses);
+                resetMaxTempDisplay();
+
+                gameStatusDiv.textContent = `Réponses reçues ! Mesure de la température en cours...`;
+
+                // Démarrer le compte à rebours de 10 secondes
+                if (json.countdown_seconds != null) {
+                    startCountdown(json.countdown_seconds);
+                } else {
+                    startCountdown(null);
+                }
+
+                startPollingGameStatus();
+            } else {
+                gameStatusDiv.textContent = 'Impossible de lancer la partie.';
+                // Réactiver le bouton en cas d'erreur
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Lancer le jeu';
+            }
+        } catch (err) {
+            console.error('Erreur start_game:', err);
+            gameStatusDiv.textContent = 'Erreur lors du lancement de la partie.';
+            // Réactiver le bouton en cas d'erreur
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Lancer le jeu';
+        }
+    });
+
+    async function checkGameStatus() {
+        try {
+            const res = await fetch('{% url "api_game_status" %}');
+            const json = await res.json();
+
+            if (json.status === 'no_game') return;
+
+            if (json.status === 'waiting') {
+                gameStatusDiv.textContent = `Mesure de la température pendant l'inférence...`;
+                renderOllamaResponses(json.ollama_responses);
+            }
+
+            if (json.status === 'finished') {
+                clearInterval(gameInterval);
+                gameInterval = null;
+                stopCountdown();
+                countdownTimerDiv.classList.add('d-none');
+
+                renderResultsAndLeaderboard(json);
+
+                renderOllamaResponses(json.ollama_responses);
+                updateMaxTempsFromBackend(json.actual_temperatures);
+
+                // Réactiver le bouton une fois la partie terminée
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Lancer le jeu';
+            }
+
+        } catch (err) {
+            console.error('Erreur game_status:', err);
+        }
+    }
+
+    function startPollingGameStatus() {
+        if (gameInterval) clearInterval(gameInterval);
+        gameInterval = setInterval(checkGameStatus, 3000);
+    }
+
+    const modelButtons = document.querySelectorAll('.model-btn');
+    let selectedModel = 'petit';
+
+    modelButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            modelButtons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            selectedModel = btn.getAttribute('data-model');
+        });
+    });
+
+    // Affichage du prompt sélectionné
+    const promptSelect = document.getElementById('prompt');
+    const promptPreview = document.getElementById('promptPreview');
+    const promptPreviewText = document.getElementById('promptPreviewText');
+
+    promptSelect.addEventListener('change', function() {
+        const selectedValue = this.value;
+        if (selectedValue) {
+            promptPreviewText.textContent = selectedValue;
+            promptPreview.classList.remove('d-none');
+        } else {
+            promptPreview.classList.add('d-none');
+        }
+    });
+</script>
+{% endblock %}

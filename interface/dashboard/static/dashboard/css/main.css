@@ -1,0 +1,18 @@
+:root {
+    --miai-red: #E30613;
+    --miai-blue: #1B9CD9;
+    --miai-blue-dark: #2C4A9A;
+    --miai-green: #2FAA4A;
+    --miai-brown: #7A3A2E;
+    --miai-gray: #4A4A4A;
+}
+
+.carousel-fade .carousel-item {
+  transition: opacity 1s ease-in-out;
+}
+
+.alert-miai {
+  background-color: var(--miai-blue, #1B9CD9);
+  color: #ffffff;
+  border: none;
+}

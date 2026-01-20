@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Fonctionnement de la maquette{% endblock %}
+
+{% block content %}
+<div id="fonctionnementCarousel"
+     class="carousel slide h-100"
+     data-bs-ride="carousel"
+     data-bs-interval="10000"
+     data-bs-pause="hover"
+     data-bs-touch="true"
+     tabindex="0"
+     data-bs-keyboard="true">
+
+  <div class="carousel-inner h-100">
+
+    <!-- Slide 1 -->
+    <div class="carousel-item active h-100">
+    <div class="d-flex h-100 flex-column">
+
+        <!-- CONTENU CENTRAL -->
+        <div class="flex-grow-1 d-flex align-items-center justify-content-center">
+        <div class="container">
+            <div class="row justify-content-center text-center">
+            <div class="col-lg-8">
+
+                <h1 class="mb-4">
+                Que se passe-t-il quand on interroge une <strong>IA générative</strong> comme ChatGPT ?
+                </h1>
+
+                <p class="lead mb-4">
+                Derrière une question simple se cache une infrastructure
+                matérielle, énergétique et thermique complexe.
+                </p>
+
+                <img
+                src="{% static 'dashboard/images/chatgpt.png' %}"
+                class="img-fluid rounded shadow"
+                style="max-height: 45vh;"
+                alt="ChatGPT"
+                >
+
+            </div>
+            </div>
+        </div>
+        </div>
+
+        <!-- QUESTION EN BAS -->
+        <div class="container pb-4">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+            <div class="alert alert-miai text-center mb-0">
+                🤔 <strong>Question :</strong>
+                À votre avis, où part votre question à ChatGPT ?
+            </div>
+            </div>
+        </div>
+        </div>
+
+    </div>
+    </div>
+
+
+    <!-- Slide 2 -->
+    <div class="carousel-item h-100">
+    <div class="d-flex h-100 flex-column">
+
+        <!-- CONTENU CENTRAL -->
+        <div class="flex-grow-1 d-flex align-items-center justify-content-center">
+        <div class="container">
+            <div class="row justify-content-center text-center">
+            <div class="col-lg-8">
+
+                <h1 class="mb-4">
+                Comment cette maquette pédagogique a-t-elle été conçue ?
+                </h1>
+
+                <p class="lead mb-4">
+                Cette maquette a été conçue à partir de 3 nano-ordinateurs (Raspberry Pi version 5) refroidis de différentes manières 
+                </p>
+
+                <img
+                src="{% static 'dashboard/images/rpi.png' %}"
+                class="img-fluid rounded shadow"
+                style="max-height: 45vh;"
+                alt="ChatGPT"
+                >
+
+            </div>
+            </div>
+        </div>
+        </div>
+
+        <!-- QUESTION EN BAS -->
+        <div class="container pb-4">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+            <div class="alert alert-miai text-center mb-0">
+                🤔 <strong>Question :</strong>
+                À votre avis, combien de fois moins de puissance consomme cette maquette de rack et un rack dans un centre de données ?
+            </div>
+            </div>
+        </div>
+        </div>
+
+    </div>
+    </div>
+
+
+    <!-- Slide 3 -->
+    <div class="carousel-item h-100">
+    <div class="d-flex h-100 flex-column">
+
+        <!-- CONTENU CENTRAL -->
+        <div class="flex-grow-1 d-flex align-items-center justify-content-center">
+        <div class="container">
+            <div class="row justify-content-center text-center">
+            <div class="col-lg-8">
+
+                <h1 class="mb-4">
+                Comment cette maquette pédagogique a-t-elle été conçue ?
+                </h1>
+
+                <p class="lead mb-4">
+                Les 3 nano-ordinateurs sont refroidis de 3 manières différentes : refroidissement passif à l'air, actif à l'air et actif à l'eau 
+                </p>
+
+                <img
+                src="{% static 'dashboard/images/cooling.png' %}"
+                class="img-fluid rounded shadow"
+                style="max-height: 45vh;"
+                alt="ChatGPT"
+                >
+
+            </div>
+            </div>
+        </div>
+        </div>
+
+        <!-- QUESTION EN BAS -->
+        <div class="container pb-4">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+            <div class="alert alert-miai text-center mb-0">
+                🤔 <strong>Question :</strong>
+                À votre avis, pourquoi les nouveaux centres de données IA ont besoin d'être refroidi à l'eau ?
+            </div>
+            </div>
+        </div>
+        </div>
+
+    </div>
+    </div>
+
+    <!-- Slide 4 -->
+    <div class="carousel-item h-100">
+    <div class="d-flex h-100 flex-column">
+
+        <!-- CONTENU CENTRAL -->
+        <div class="flex-grow-1 d-flex align-items-center justify-content-center">
+        <div class="container">
+            <div class="row justify-content-center text-center">
+            <div class="col-lg-8">
+
+                <h1 class="mb-4">
+                Comment cette maquette pédagogique a-t-elle été conçue ?
+                </h1>
+
+                <p class="lead mb-4">
+                Les modèles d'IA générative utilisés sont les petits modèles "open-source" suivants : Qwen, Llama et Mistral  
+                </p>
+
+                <img
+                src="{% static 'dashboard/images/models.png' %}"
+                class="img-fluid rounded shadow"
+                style="max-height: 45vh;"
+                alt="ChatGPT"
+                >
+
+            </div>
+            </div>
+        </div>
+        </div>
+
+        <!-- QUESTION EN BAS -->
+        <div class="container pb-4">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+            <div class="alert alert-miai text-center mb-0">
+                🤔 <strong>Question :</strong>
+                À votre avis, combien de fois plus petits sont ces modèles par rapport à ceux de ChatGPT ?
+            </div>
+            </div>
+        </div>
+        </div>
+
+    </div>
+    </div>
+
+
+  </div>
+
+  <!-- Contrôles -->
+  <button class="carousel-control-prev"
+          type="button"
+          data-bs-target="#fonctionnementCarousel"
+          data-bs-slide="prev">
+    <span class="carousel-control-prev-icon"></span>
+  </button>
+
+  <button class="carousel-control-next"
+          type="button"
+          data-bs-target="#fonctionnementCarousel"
+          data-bs-slide="next">
+    <span class="carousel-control-next-icon"></span>
+  </button>
+
+</div>
+{% endblock %}
