@@ -57,25 +57,16 @@
         font-size: 0.9rem;
         font-style: italic;
         margin-top: 0.1rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .rpi-token-count {
+        font-size: 0.9rem;
+        font-style: italic;
+        margin-top: 0;
         margin-bottom: 0.5rem;
     }
 
-    pre.rpi-response {
-        background: #f8f9fa;
-        padding: 0.5rem;
-        border-radius: 0.5rem;
-        overflow-x: auto;
-        margin-bottom: 0;
-    }
-
-    .model-buttons .model-btn {
-        margin-right: 0.5rem;
-        margin-bottom: 0.5rem;
-    }
-
-    .model-btn.active {
-        box-shadow: 0 0 0 0.2rem rgba(13,110,253,0.25);
-    }
 
     .chart-wrapper {
         flex: 0 0 50%;
@@ -109,16 +100,47 @@
         flex-direction: column;
     }
 
-    pre.rpi-response {
+    .rpi-response {
         background: #f8f9fa;
         padding: 0.5rem;
         border-radius: 0.5rem;
         margin-bottom: 0;
-        white-space: pre-wrap;
-        word-wrap: break-word;
         flex: 1 1 auto;
         max-height: 300px;
         overflow-y: auto;
+    }
+
+    .rpi-response pre {
+        background: #e9ecef;
+        padding: 0.5rem;
+        border-radius: 0.25rem;
+        overflow-x: auto;
+    }
+
+    .rpi-response code {
+        background: #e9ecef;
+        padding: 0.1rem 0.3rem;
+        border-radius: 0.2rem;
+    }
+
+    .power-display {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: #fff3cd;
+        padding: 0.25rem 0.75rem;
+        border-radius: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .power-display.inactive {
+        background: #e9ecef;
+        color: #6c757d;
+    }
+
+    .power-value {
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
     }
 </style>
 
@@ -130,9 +152,20 @@
             <div class="col-lg-8 d-flex">
                 <div class="card card-fullheight shadow-sm w-100">
                     <div class="card-body d-flex flex-column">
-                        <div class="mb-2">
-                            <h2 class="h5 card-title mb-1">Températures en temps réel</h2>
-                            <p class="text-muted mb-0">Actualisation toutes les 2 secondes.</p>
+                        <div class="mb-2 d-flex justify-content-between align-items-start flex-wrap gap-2">
+                            <div>
+                                <h2 class="h5 card-title mb-1">Températures en temps réel</h2>
+                                <p class="text-muted mb-0">Actualisation toutes les 2 secondes.</p>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <div id="powerDisplay" class="power-display inactive">
+                                    <span>Puissance :</span>
+                                    <span id="powerValue" class="power-value">-- W</span>
+                                </div>
+                                <button id="powerToggle" class="btn btn-outline-warning btn-sm">
+                                    Activer
+                                </button>
+                            </div>
                         </div>
 
                         <div class="chart-wrapper mb-2">
@@ -140,7 +173,7 @@
                         </div>
 
                         <div id="rpiBlocksContainer"
-                             class="rpi-blocks-container rpi-blocks-scroll row row-cols-1 row-cols-md-2 g-2">
+                             class="rpi-blocks-container rpi-blocks-scroll row row-cols-1 row-cols-md-3 g-2">
                         </div>
                     </div>
                 </div>
@@ -159,21 +192,15 @@
                             </div>
 
                             <div class="mb-3">
-                                <label class="form-label d-block">Choix du modèle</label>
-                                <div class="model-buttons btn-group" role="group" aria-label="Choix du modèle">
-                                    <button type="button" class="model-btn btn btn-outline-primary active" data-model="petit">
-                                        Petit modèle<br>
-                                        (gemma3:270m)
-                                    </button>
-                                    <button type="button" class="model-btn btn btn-outline-primary" data-model="moyen" disabled>
-                                        Moyen modèle<br>
-                                        (falcon3:1b)
-                                    </button>
-                                    <button type="button" class="model-btn btn btn-outline-primary" data-model="grand" disabled>
-                                        Grand modèle<br>
-                                        (qwen3:1.7b)
-                                    </button>
-                                </div>
+                                <label for="modelSelect" class="form-label">Choix du modèle</label>
+                                <select id="modelSelect" class="form-select" required>
+                                    <option value="gemma3:270m" data-size="petit">🇺🇸 Gemma3:270m (Petit modèle)</option>
+                                    <option value="qwen3:0.6b" data-size="petit">🇨🇳 Qwen3:0.6b (Petit modèle)</option>
+                                    <option value="falcon3:1b" data-size="moyen">🇦🇪 Falcon3:1b (Moyen modèle)</option>
+                                    <option value="llama3.2:1b" data-size="moyen">🇺🇸 Llama3.2:1b (Moyen modèle)</option>
+                                    <option value="deepseek-r1:1.5b" data-size="grand">🇨🇳 DeepSeek R1:1.5b (Grand modèle)</option>
+                                    <option value="ministral-3:3b" data-size="grand">🇫🇷 Ministral-3:3b (Grand modèle)</option>
+                                </select>
                             </div>
 
                             <div class="mb-3">
@@ -196,7 +223,7 @@
                             </div>
 
                             <div class="mb-3">
-                                <label for="prompt" class="form-label">Prompt pour Ollama</label>
+                                <label for="prompt" class="form-label">Prompt envoyé au modèle</label>
                                 <select id="prompt" class="form-select" required>
                                     <option value="">-- Choisissez un prompt --</option>
                                     <option value="Quel mot définit le mieux Grenoble ?">📝 Grenoble en un mot</option>
@@ -243,6 +270,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
     // ----------------------- GRAPH -----------------------
     const ctx = document.getElementById('tempChart').getContext('2d');
@@ -252,8 +280,8 @@
 
     const COLORS = [
         '#e74c3c',
-        '#3498db',
         '#2ecc71',
+        '#3498db',
         '#9b59b6',
         '#f1c40f',
         '#e67e22',
@@ -295,8 +323,9 @@
                 <div class="card-body p-2">
                     <h3 class="h6">${name}</h3>
                     <p class="rpi-max-temp text-muted">Température max pendant l'inférence : -- °C</p>
-                    <h4 class="h6">Réponse d'Ollama</h4>
-                    <pre class="rpi-response">(en attente...)</pre>
+                    <p class="rpi-token-count text-muted">Tokens générés (estimation) : --</p>
+                    <h4 class="h6">Réponse du modèle</h4>
+                    <div class="rpi-response"><em>(en attente...)</em></div>
                 </div>
             </div>
         `;
@@ -310,7 +339,24 @@
             if (!block) return;
             const p = block.querySelector('.rpi-max-temp');
             p.textContent = "Température max pendant l'inférence : -- °C";
+            const pTokens = block.querySelector('.rpi-token-count');
+            pTokens.textContent = "Tokens générés (estimation) : --";
         });
+    }
+
+    function updateTokenCounts(tokenCounts) {
+        if (!tokenCounts) return;
+        for (const name of raspberries) {
+            const block = rpiBlocks[name];
+            if (!block) continue;
+            const p = block.querySelector('.rpi-token-count');
+            const value = tokenCounts[name];
+            if (value == null) {
+                p.textContent = "Tokens générés (estimation) : N/A";
+            } else {
+                p.textContent = `Tokens générés (estimation) : ${value}`;
+            }
+        }
     }
 
     function updateMaxTempsFromBackend(actualTemps) {
@@ -352,6 +398,53 @@
     fetchTemperatures();
     setInterval(fetchTemperatures, 2000);
 
+    // ----------------------- PUISSANCE INSTANTANÉE -----------------------
+    const powerDisplay = document.getElementById('powerDisplay');
+    const powerValue = document.getElementById('powerValue');
+    const powerToggle = document.getElementById('powerToggle');
+
+    let powerEnabled = false;
+    let powerInterval = null;
+
+    async function fetchPower() {
+        try {
+            const response = await fetch('{% url "api_power" %}');
+            const json = await response.json();
+            if (json.status === 'success' && json.power != null) {
+                powerValue.textContent = `${json.power} W`;
+            } else {
+                powerValue.textContent = 'Erreur';
+            }
+        } catch (err) {
+            console.error('Erreur en récupérant la puissance:', err);
+            powerValue.textContent = 'Erreur';
+        }
+    }
+
+    function togglePower() {
+        powerEnabled = !powerEnabled;
+        if (powerEnabled) {
+            powerDisplay.classList.remove('inactive');
+            powerToggle.textContent = 'Désactiver';
+            powerToggle.classList.remove('btn-outline-warning');
+            powerToggle.classList.add('btn-warning');
+            fetchPower();
+            powerInterval = setInterval(fetchPower, 2000);
+        } else {
+            powerDisplay.classList.add('inactive');
+            powerToggle.textContent = 'Activer';
+            powerToggle.classList.remove('btn-warning');
+            powerToggle.classList.add('btn-outline-warning');
+            powerValue.textContent = '-- W';
+            if (powerInterval) {
+                clearInterval(powerInterval);
+                powerInterval = null;
+            }
+        }
+    }
+
+    powerToggle.addEventListener('click', togglePower);
+
     // ----------------------- JEU + COMPTE À REBOURS + CLASSEMENT -----------------------
     const gameForm = document.getElementById('gameForm');
     const gameStatusDiv = document.getElementById('gameStatus');
@@ -373,8 +466,8 @@
             raspberries.forEach((name) => {
                 const block = rpiBlocks[name];
                 if (!block) return;
-                const pre = block.querySelector('.rpi-response');
-                pre.textContent = '(en attente...)';
+                const container = block.querySelector('.rpi-response');
+                container.innerHTML = '<em>(en attente...)</em>';
             });
             if (ollamaResponsesDiv) {
                 ollamaResponsesDiv.textContent = '';
@@ -386,8 +479,9 @@
             const text = responses[name] ?? '(aucune réponse)';
             const block = rpiBlocks[name];
             if (!block) return;
-            const pre = block.querySelector('.rpi-response');
-            pre.textContent = text;
+            const container = block.querySelector('.rpi-response');
+            // Convertir le markdown en HTML
+            container.innerHTML = marked.parse(text);
         });
 
         if (ollamaResponsesDiv) {
@@ -504,12 +598,78 @@
 
     const submitBtn = document.getElementById('submitBtn');
 
+    function validateForm() {
+        const errors = [];
+
+        // Vérifier le prénom
+        const playerName = document.getElementById('playerName').value.trim();
+        if (!playerName) {
+            errors.push('Veuillez entrer votre prénom');
+            document.getElementById('playerName').classList.add('is-invalid');
+        } else {
+            document.getElementById('playerName').classList.remove('is-invalid');
+        }
+
+        // Vérifier le modèle
+        const model = document.getElementById('modelSelect').value;
+        if (!model) {
+            errors.push('Veuillez choisir un modèle');
+            document.getElementById('modelSelect').classList.add('is-invalid');
+        } else {
+            document.getElementById('modelSelect').classList.remove('is-invalid');
+        }
+
+        // Vérifier les températures prédites
+        let allTempsValid = true;
+        raspberries.forEach((name) => {
+            const input = document.querySelector(`input[data-name="${name}"]`);
+            if (input) {
+                const value = input.value.trim();
+                if (!value || isNaN(parseFloat(value))) {
+                    allTempsValid = false;
+                    input.classList.add('is-invalid');
+                } else {
+                    input.classList.remove('is-invalid');
+                }
+            }
+        });
+        if (!allTempsValid) {
+            errors.push('Veuillez entrer toutes les températures prédites');
+        }
+
+        // Vérifier le prompt
+        const prompt = document.getElementById('prompt').value;
+        if (!prompt) {
+            errors.push('Veuillez choisir un prompt');
+            document.getElementById('prompt').classList.add('is-invalid');
+        } else {
+            document.getElementById('prompt').classList.remove('is-invalid');
+        }
+
+        return errors;
+    }
+
     gameForm.addEventListener('submit', async (event) => {
         event.preventDefault();
+
+        // Validation du formulaire
+        const validationErrors = validateForm();
+        if (validationErrors.length > 0) {
+            gameStatusDiv.innerHTML = `
+                <div class="alert alert-warning py-2" role="alert">
+                    <strong>Formulaire incomplet :</strong>
+                    <ul class="mb-0 mt-1">
+                        ${validationErrors.map(e => `<li>${e}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+            return;
+        }
 
         // Désactiver le bouton
         submitBtn.disabled = true;
         submitBtn.textContent = 'Calcul en cours...';
+        gameStatusDiv.innerHTML = '';
 
         const prompt = document.getElementById('prompt').value;
         const predictions = {};
@@ -534,7 +694,8 @@
                 body: JSON.stringify({
                     prompt,
                     predictions,
-                    player_name: currentPlayerName
+                    player_name: currentPlayerName,
+                    model: selectedModel
                 })
             });
             const json = await res.json();
@@ -542,6 +703,7 @@
             if (json.status === 'started') {
                 renderOllamaResponses(json.ollama_responses);
                 resetMaxTempDisplay();
+                updateTokenCounts(json.token_counts);
 
                 gameStatusDiv.textContent = `Réponses reçues ! Mesure de la température en cours...`;
 
@@ -578,6 +740,7 @@
             if (json.status === 'waiting') {
                 gameStatusDiv.textContent = `Mesure de la température pendant l'inférence...`;
                 renderOllamaResponses(json.ollama_responses);
+                updateTokenCounts(json.token_counts);
             }
 
             if (json.status === 'finished') {
@@ -590,6 +753,7 @@
 
                 renderOllamaResponses(json.ollama_responses);
                 updateMaxTempsFromBackend(json.actual_temperatures);
+                updateTokenCounts(json.token_counts);
 
                 // Réactiver le bouton une fois la partie terminée
                 submitBtn.disabled = false;
@@ -606,15 +770,11 @@
         gameInterval = setInterval(checkGameStatus, 3000);
     }
 
-    const modelButtons = document.querySelectorAll('.model-btn');
-    let selectedModel = 'petit';
+    const modelSelect = document.getElementById('modelSelect');
+    let selectedModel = modelSelect.value;
 
-    modelButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            modelButtons.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            selectedModel = btn.getAttribute('data-model');
-        });
+    modelSelect.addEventListener('change', () => {
+        selectedModel = modelSelect.value;
     });
 
     // Affichage du prompt sélectionné

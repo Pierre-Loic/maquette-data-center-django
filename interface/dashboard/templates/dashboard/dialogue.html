@@ -1,0 +1,523 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Dialogue entre modèles – Raspberry Pi{% endblock %}
+
+{% block content %}
+<style>
+    .chat-messages {
+        height: 450px;
+        overflow-y: auto;
+        background: #f8f9fa;
+        border-radius: 0.5rem;
+        padding: 1rem;
+    }
+
+    .chat-message {
+        margin-bottom: 1rem;
+        padding: 0.75rem 1rem;
+        border-radius: 0.5rem;
+        max-width: 90%;
+    }
+
+    .chat-message.model-0 {
+        background: #e3f2fd;
+        border-left: 4px solid #2196f3;
+        margin-right: auto;
+    }
+
+    .chat-message.model-1 {
+        background: #e8f5e9;
+        border-left: 4px solid #4caf50;
+        margin-left: auto;
+        margin-right: 5%;
+    }
+
+    .chat-message.model-2 {
+        background: #fff3e0;
+        border-left: 4px solid #ff9800;
+        margin-left: 10%;
+    }
+
+    .chat-message .model-name {
+        font-weight: 600;
+        font-size: 0.8rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .chat-message .model-content {
+        font-size: 0.9rem;
+    }
+
+    .chat-message .model-meta {
+        font-size: 0.7rem;
+        color: #6c757d;
+        margin-top: 0.5rem;
+    }
+
+    .thinking-indicator {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        color: #6c757d;
+        font-style: italic;
+    }
+
+    .thinking-indicator .spinner-border {
+        width: 1rem;
+        height: 1rem;
+    }
+
+    .controls-card {
+        position: sticky;
+        bottom: 0;
+    }
+
+    .power-display {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: #fff3cd;
+        padding: 0.2rem 0.5rem;
+        border-radius: 0.5rem;
+        font-size: 0.8rem;
+    }
+
+    .power-display.inactive {
+        background: #e9ecef;
+        color: #6c757d;
+    }
+
+    .power-value {
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .sidebar-chart {
+        height: 200px;
+    }
+
+    .temp-current {
+        font-size: 0.75rem;
+    }
+
+    .temp-value {
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+    }
+</style>
+
+<div class="container-fluid py-2">
+    <div class="row g-3">
+        <!-- ======================= DIALOGUE (gauche) ======================= -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm mb-3">
+                <div class="card-body pb-2">
+                    <h2 class="h5 card-title mb-2">Dialogue entre modèles IA</h2>
+                    <p class="text-muted small mb-2">
+                        Les modèles dialoguent tour à tour sur le Tech&Fest Grenoble 2026.
+                    </p>
+
+                    <div class="alert alert-info py-2 mb-3">
+                        <strong>Tech&Fest Grenoble 2026</strong> — Les modèles IA vont discuter du festival de l'innovation qui se déroule les 4 et 5 février à Alpexpo.
+                    </div>
+
+                    <form id="dialogueForm">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-md-6">
+                                <label for="modelSelect" class="form-label small">Modèle utilisé</label>
+                                <select id="modelSelect" class="form-select form-select-sm">
+                                    <option value="gemma3:270m">Gemma3:270m</option>
+                                    <option value="qwen3:0.6b">Qwen3:0.6b</option>
+                                    <option value="falcon3:1b">Falcon3:1b</option>
+                                    <option value="llama3.2:1b">Llama3.2:1b</option>
+                                    <option value="deepseek-r1:1.5b">DeepSeek R1:1.5b</option>
+                                    <option value="ministral-3:3b">Ministral-3:3b</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <button type="submit" id="startBtn" class="btn btn-success btn-sm w-100">
+                                    Lancer le dialogue sur Tech&Fest
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-3">
+                <div class="card-body p-2">
+                    <div id="chatMessages" class="chat-messages">
+                        <div class="text-center text-muted py-5">
+                            <p>Le dialogue apparaîtra ici...</p>
+                            <p class="small">Cliquez sur "Lancer le dialogue sur Tech&Fest"</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm controls-card">
+                <div class="card-body py-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div id="statusText" class="text-muted small">En attente...</div>
+                        <div class="d-flex gap-2">
+                            <button id="stopBtn" class="btn btn-danger btn-sm" disabled>
+                                Arrêter
+                            </button>
+                            <button id="clearBtn" class="btn btn-outline-secondary btn-sm">
+                                Effacer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ======================= MONITORING (droite) ======================= -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-3">
+                <div class="card-body p-2">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="card-title mb-0">Températures</h6>
+                        <small class="text-muted">Temps réel</small>
+                    </div>
+                    <div class="sidebar-chart">
+                        <canvas id="tempChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-3">
+                <div class="card-body p-2">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="card-title mb-0">Valeurs actuelles</h6>
+                    </div>
+                    <div id="currentTemps" class="small">
+                        {% for name in raspberries %}
+                        <div class="d-flex justify-content-between temp-current py-1 border-bottom">
+                            <span>{{ name }}</span>
+                            <span class="temp-value" data-name="{{ name }}">-- °C</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-body p-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="card-title mb-0">Puissance</h6>
+                        <div class="d-flex align-items-center gap-2">
+                            <div id="powerDisplay" class="power-display inactive">
+                                <span id="powerValue" class="power-value">-- W</span>
+                            </div>
+                            <button id="powerToggle" class="btn btn-outline-warning btn-sm py-0 px-2">
+                                On
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+    const raspberries = {{ raspberries|safe }};
+
+    // ----------------------- GRAPHIQUE TEMPÉRATURES -----------------------
+    const ctx = document.getElementById('tempChart').getContext('2d');
+    const labels = [];
+
+    const COLORS = ['#e74c3c', '#2ecc71', '#3498db', '#9b59b6', '#f1c40f', '#e67e22'];
+
+    const datasets = raspberries.map((name, idx) => ({
+        label: name,
+        data: [],
+        borderColor: COLORS[idx % COLORS.length],
+        backgroundColor: COLORS[idx % COLORS.length] + '33',
+        tension: 0.2,
+        pointRadius: 1,
+        borderWidth: 1.5,
+    }));
+
+    const config = {
+        type: 'line',
+        data: { labels: labels, datasets: datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'bottom',
+                    labels: { boxWidth: 12, font: { size: 10 } }
+                }
+            },
+            scales: {
+                y: {
+                    title: { display: false },
+                    ticks: { font: { size: 9 } }
+                },
+                x: {
+                    display: false
+                }
+            }
+        }
+    };
+
+    const tempChart = new Chart(ctx, config);
+
+    async function fetchTemperatures() {
+        try {
+            const response = await fetch('{% url "api_temperatures" %}');
+            const json = await response.json();
+
+            labels.push(json.timestamp);
+            if (labels.length > 30) labels.shift();
+
+            config.data.datasets.forEach((dataset) => {
+                const name = dataset.label;
+                const temp = json.temperatures[name];
+                dataset.data.push(temp);
+                if (dataset.data.length > 30) dataset.data.shift();
+
+                // Mise à jour des valeurs actuelles
+                const valueSpan = document.querySelector(`.temp-value[data-name="${name}"]`);
+                if (valueSpan) {
+                    valueSpan.textContent = temp != null ? `${temp.toFixed(1)} °C` : '-- °C';
+                }
+            });
+
+            tempChart.update();
+        } catch (err) {
+            console.error('Erreur températures:', err);
+        }
+    }
+
+    fetchTemperatures();
+    setInterval(fetchTemperatures, 2000);
+
+    // ----------------------- PUISSANCE -----------------------
+    const powerDisplay = document.getElementById('powerDisplay');
+    const powerValue = document.getElementById('powerValue');
+    const powerToggle = document.getElementById('powerToggle');
+
+    let powerEnabled = false;
+    let powerInterval = null;
+
+    async function fetchPower() {
+        try {
+            const response = await fetch('{% url "api_power" %}');
+            const json = await response.json();
+            if (json.status === 'success' && json.power != null) {
+                powerValue.textContent = `${json.power} W`;
+            } else {
+                powerValue.textContent = 'Err';
+            }
+        } catch (err) {
+            powerValue.textContent = 'Err';
+        }
+    }
+
+    function togglePower() {
+        powerEnabled = !powerEnabled;
+        if (powerEnabled) {
+            powerDisplay.classList.remove('inactive');
+            powerToggle.textContent = 'Off';
+            powerToggle.classList.remove('btn-outline-warning');
+            powerToggle.classList.add('btn-warning');
+            fetchPower();
+            powerInterval = setInterval(fetchPower, 2000);
+        } else {
+            powerDisplay.classList.add('inactive');
+            powerToggle.textContent = 'On';
+            powerToggle.classList.remove('btn-warning');
+            powerToggle.classList.add('btn-outline-warning');
+            powerValue.textContent = '-- W';
+            if (powerInterval) {
+                clearInterval(powerInterval);
+                powerInterval = null;
+            }
+        }
+    }
+
+    powerToggle.addEventListener('click', togglePower);
+
+    // ----------------------- DIALOGUE -----------------------
+    const chatMessages = document.getElementById('chatMessages');
+    const dialogueForm = document.getElementById('dialogueForm');
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const statusText = document.getElementById('statusText');
+    const modelSelect = document.getElementById('modelSelect');
+
+    let isRunning = false;
+    let conversationHistory = [];
+    let currentModelIndex = 0;
+
+    const MODEL_COLORS = ['model-0', 'model-1', 'model-2'];
+
+    // Contexte Tech&Fest prédéfini
+    const TECHFEST_CONTEXT = `Parle-moi de l'événement Tech&Fest qui se déroule à Grenoble.
+
+Voici les informations connues :
+• C'est le festival de l'innovation et de la tech qui aura lieu les 4 et 5 février 2026 à Alpexpo, Grenoble (France).
+• Il attire des chercheurs, dirigeants, entrepreneurs, étudiants et talents en recherche d'emploi, ainsi que des conférenciers, exposants et start-ups.
+• L'ambition de l'événement est de célébrer le meilleur de l'innovation et de placer la souveraineté technologique, économique et numérique au cœur des réflexions.
+• Tech&Fest réunit l'industrie, la recherche, l'éducation et l'entrepreneuriat, avec des zones thématiques, des conférences, des ateliers, des démonstrations, du networking, du job dating et des espaces d'échanges.
+• De nombreux acteurs publics et privés (universités, CEA, CNRS, French Tech, etc.) y participent, avec des contenus variés autour de la tech, de l'IA, de la santé, de la planète, de l'industrie et des nouveaux usages.
+
+Présente cet événement en style informatif et attractif pour un public intéressé par la technologie et l'innovation.`;
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function addMessage(modelName, content, tokens, modelIndex) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `chat-message ${MODEL_COLORS[modelIndex % 3]}`;
+        msgDiv.innerHTML = `
+            <div class="model-name">${modelName}</div>
+            <div class="model-content">${marked.parse(content)}</div>
+            <div class="model-meta">~${tokens} tokens</div>
+        `;
+        chatMessages.appendChild(msgDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function showThinking(modelName) {
+        const thinkingDiv = document.createElement('div');
+        thinkingDiv.id = 'thinkingIndicator';
+        thinkingDiv.className = 'thinking-indicator';
+        thinkingDiv.innerHTML = `
+            <div class="spinner-border text-secondary" role="status"></div>
+            <span>${modelName} réfléchit...</span>
+        `;
+        chatMessages.appendChild(thinkingDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function hideThinking() {
+        const indicator = document.getElementById('thinkingIndicator');
+        if (indicator) indicator.remove();
+    }
+
+    function clearChat() {
+        chatMessages.innerHTML = `
+            <div class="text-center text-muted py-5">
+                <p>Le dialogue apparaîtra ici...</p>
+                <p class="small">Cliquez sur "Lancer le dialogue sur Tech&Fest"</p>
+            </div>
+        `;
+        conversationHistory = [];
+        currentModelIndex = 0;
+    }
+
+    async function getNextResponse() {
+        if (!isRunning || raspberries.length === 0) return;
+
+        const currentModel = raspberries[currentModelIndex % raspberries.length];
+        showThinking(currentModel);
+        statusText.textContent = `${currentModel} génère...`;
+
+        try {
+            const csrftoken = getCookie('csrftoken');
+            const res = await fetch('{% url "api_dialogue_next" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({
+                    model: modelSelect.value,
+                    model_index: currentModelIndex % raspberries.length,
+                    conversation_history: conversationHistory
+                })
+            });
+
+            const json = await res.json();
+            hideThinking();
+
+            if (json.status === 'success') {
+                addMessage(currentModel, json.response, json.tokens, currentModelIndex % raspberries.length);
+                conversationHistory.push({
+                    model: currentModel,
+                    content: json.response
+                });
+                currentModelIndex++;
+                statusText.textContent = `Tour ${conversationHistory.length}`;
+
+                if (isRunning) {
+                    setTimeout(getNextResponse, 1000);
+                }
+            } else {
+                statusText.textContent = `Erreur: ${json.message}`;
+                stopDialogue();
+            }
+        } catch (err) {
+            hideThinking();
+            console.error('Erreur dialogue:', err);
+            statusText.textContent = 'Erreur connexion';
+            stopDialogue();
+        }
+    }
+
+    function startDialogue() {
+        isRunning = true;
+        conversationHistory = [];
+        currentModelIndex = 0;
+
+        conversationHistory.push({
+            model: 'system',
+            content: TECHFEST_CONTEXT + `\n\nRÈGLES STRICTES:
+- Répondez en UNE SEULE PHRASE COURTE (15 mots max)
+- INTERDIT de répéter ce que les autres ont dit
+- Ajoutez une NOUVELLE information ou un NOUVEL aspect
+- Répondez UNIQUEMENT avec votre phrase, sans introduction`
+        });
+
+        chatMessages.innerHTML = '';
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        modelSelect.disabled = true;
+
+        statusText.textContent = 'Dialogue en cours...';
+        getNextResponse();
+    }
+
+    function stopDialogue() {
+        isRunning = false;
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+        modelSelect.disabled = false;
+        statusText.textContent = 'Dialogue arrêté';
+    }
+
+    dialogueForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        startDialogue();
+    });
+
+    stopBtn.addEventListener('click', stopDialogue);
+    clearBtn.addEventListener('click', () => {
+        stopDialogue();
+        clearChat();
+        statusText.textContent = 'En attente...';
+    });
+</script>
+{% endblock %}

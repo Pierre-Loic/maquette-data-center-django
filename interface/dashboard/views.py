@@ -17,15 +17,15 @@ RASPBERRIES = [
         "ollama_url": "http://192.168.137.10:8000/ollama/generate",
     },
     {
-        "name": "Refroidissement actif air 💨",
+        "name": "Refroidissement actif air 🍃",
         "temp_url": "http://192.168.137.11:8000/metrics/temperature",
         "ollama_url": "http://192.168.137.11:8000/ollama/generate",
     },
-    # {
-    #     "name": "Refroidissement actif eau 💧",
-    #     "temp_url": "http://192.168.137.12:8000/metrics/temperature",
-    #     "ollama_url": "http://192.168.137.12:8000/ollama/generate",
-    # },
+    {
+         "name": "Refroidissement actif eau 💧",
+         "temp_url": "http://192.168.137.12:8000/metrics/temperature",
+         "ollama_url": "http://192.168.137.12:8000/ollama/generate",
+    },
 ]
 
 # État du jeu en mémoire (pour une vraie app, utiliser cache Django ou Redis)
@@ -43,19 +43,30 @@ current_game = {
 temperature_samples = []
 
 
-def call_ollama(rpi, prompt):
-    """Appelle Ollama sur un Raspberry Pi donné"""
+def estimate_tokens(text):
+    """Estime le nombre de tokens à partir du texte (environ 4 caractères par token)"""
+    if not text:
+        return 0
+    return max(1, len(text) // 4)
+
+
+def call_ollama(rpi, prompt, model="gemma3:270m"):
+    """Appelle Ollama sur un Raspberry Pi donné. Retourne (name, response, token_count)"""
     name = rpi["name"]
     url = rpi["ollama_url"]
+    print(model)
     try:
-        payload = {"prompt": prompt}
+        payload = {"prompt": prompt, "model": model}
         res = requests.post(url, json=payload, timeout=120)
         res.raise_for_status()
         resp_json = res.json()
-        return name, resp_json.get("response", "(aucune réponse)")
+        response = resp_json.get("response", "(aucune réponse)")
+        # Utilise eval_count si disponible, sinon estime à partir de la réponse
+        token_count = resp_json.get("eval_count") or estimate_tokens(response)
+        return name, response, token_count
     except Exception as e:
         print(f"Erreur appel Ollama pour {name} ({url}): {e}")
-        return name, f"Erreur en appelant Ollama sur {name}."
+        return name, f"🔥🤯 Surchauffe !!", 0
 
 
 def fetch_temperatures():
@@ -145,22 +156,25 @@ def api_start_game(request):
         prompt = data.get("prompt", "")
         predictions = data.get("predictions", {}) or {}
         player_name = data.get("player_name", "Joueur")
+        model = data.get("model", "gemma3:270m")
 
         # Début de la fenêtre : juste avant l'envoi des prompts
         window_start = time.time()
 
         ollama_responses = {}
+        token_counts = {}
 
         # Appels Ollama en parallèle
         with ThreadPoolExecutor(max_workers=len(RASPBERRIES)) as executor:
             futures = [
-                executor.submit(call_ollama, rpi, prompt)
+                executor.submit(call_ollama, rpi, prompt, model)
                 for rpi in RASPBERRIES
             ]
 
             for future in as_completed(futures):
-                name, response = future.result()
+                name, response, token_count = future.result()
                 ollama_responses[name] = response
+                token_counts[name] = token_count
 
         last_response_at = time.time()
         window_end = last_response_at + 10.0  # 10s après la fin de l'inférence
@@ -168,6 +182,7 @@ def api_start_game(request):
         current_game["prompt"] = prompt
         current_game["predictions"] = predictions
         current_game["ollama_responses"] = ollama_responses
+        current_game["token_counts"] = token_counts
         current_game["window_start"] = window_start
         current_game["window_end"] = window_end
         current_game["last_response_at"] = last_response_at
@@ -177,6 +192,7 @@ def api_start_game(request):
             "status": "started",
             "countdown_seconds": 10,  # Compte à rebours fixe de 10 secondes
             "ollama_responses": ollama_responses,
+            "token_counts": token_counts,
         })
 
     except Exception as e:
@@ -204,6 +220,7 @@ def api_game_status(request):
             "status": "waiting",
             "remaining_seconds": remaining,
             "ollama_responses": current_game.get("ollama_responses"),
+            "token_counts": current_game.get("token_counts"),
         })
 
     # Fenêtre terminée → calcul des max à partir de l'historique
@@ -252,7 +269,7 @@ def api_game_status(request):
     # Mapper les noms aux champs du modèle
     rpi_mapping = {
         "Refroidissement passif ♨️": (1, "pi1"),
-        "Refroidissement actif air 💨": (2, "pi2"),
+        "Refroidissement actif air 🍃": (2, "pi2"),
         "Refroidissement actif eau 💧": (3, "pi3"),
     }
 
@@ -301,7 +318,103 @@ def api_game_status(request):
         "errors": errors,
         "score": score,
         "ollama_responses": ollama_responses,
+        "token_counts": current_game.get("token_counts"),
         "window_start": window_start,
         "window_end": window_end,
         "top3": top3_data,
     })
+
+
+# ==================== Dialogue entre modèles ====================
+
+class DialogueView(TemplateView):
+    """Vue pour le dialogue entre modèles"""
+    template_name = "dashboard/dialogue.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['raspberries'] = [r["name"] for r in RASPBERRIES]
+        return context
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_dialogue_next(request):
+    """Génère la prochaine réponse dans le dialogue"""
+    try:
+        data = json.loads(request.body)
+        model = data.get("model", "gemma3:270m")
+        model_index = data.get("model_index", 0)
+        conversation_history = data.get("conversation_history", [])
+
+        if not RASPBERRIES:
+            return JsonResponse({
+                "status": "error",
+                "message": "Aucun Raspberry Pi configuré"
+            }, status=400)
+
+        # Sélectionner le Raspberry Pi pour ce tour
+        rpi = RASPBERRIES[model_index % len(RASPBERRIES)]
+
+        # Construire le prompt avec l'historique de conversation
+        prompt_parts = []
+        previous_responses = []
+
+        for msg in conversation_history:
+            if msg["model"] == "system":
+                prompt_parts.append(msg['content'])
+            else:
+                previous_responses.append(msg['content'])
+
+        if previous_responses:
+            prompt_parts.append("\n--- DÉJÀ DIT (NE PAS RÉPÉTER) ---")
+            for i, resp in enumerate(previous_responses, 1):
+                prompt_parts.append(f"{i}. {resp}")
+            prompt_parts.append("--- FIN ---\n")
+
+        prompt_parts.append(f"Votre réponse (une seule phrase nouvelle) :")
+        full_prompt = "\n".join(prompt_parts)
+
+        # Appeler Ollama
+        name, response, token_count = call_ollama(rpi, full_prompt, model)
+
+        return JsonResponse({
+            "status": "success",
+            "model": name,
+            "response": response,
+            "tokens": token_count,
+        })
+
+    except Exception as e:
+        print(f"Erreur dans api_dialogue_next: {e}")
+        return JsonResponse({
+            "status": "error",
+            "message": str(e)
+        }, status=500)
+
+
+# ==================== Puissance instantanée ====================
+
+SMART_PLUG_URL = "http://10.23.206.35/cm?cmnd=Status%208"
+
+
+@require_http_methods(["GET"])
+def api_power(request):
+    """Récupère la puissance instantanée depuis la prise connectée"""
+    try:
+        res = requests.get(SMART_PLUG_URL, timeout=2)
+        res.raise_for_status()
+        data = res.json()
+        energy = data.get("StatusSNS", {}).get("ENERGY", {})
+        return JsonResponse({
+            "status": "success",
+            "power": energy.get("Power"),
+            "voltage": energy.get("Voltage"),
+            "current": energy.get("Current"),
+        })
+    except Exception as e:
+        print(f"Erreur récupération puissance: {e}")
+        return JsonResponse({
+            "status": "error",
+            "message": str(e)
+        }, status=500)
