@@ -115,11 +115,11 @@
                 <div class="card-body pb-2">
                     <h2 class="h5 card-title mb-2">Dialogue entre modèles IA</h2>
                     <p class="text-muted small mb-2">
-                        Les modèles dialoguent tour à tour sur le Tech&Fest Grenoble 2026.
+                        Les modèles dialoguent tour à tour sur le congrès Eau & intelligence artificielle.
                     </p>
 
                     <div class="alert alert-info py-2 mb-3">
-                        <strong>Tech&Fest Grenoble 2026</strong> — Les modèles IA vont discuter du festival de l'innovation qui se déroule les 4 et 5 février à Alpexpo.
+                        <strong>Congrès Eau & intelligence artificielle</strong> — Les modèles IA vont discuter du congrès Eau & intelligence artificielle qui se déroule les 4, 5 et 6 mars à Grenoble.
                     </div>
 
                     <form id="dialogueForm">
@@ -137,7 +137,7 @@
                             </div>
                             <div class="col-md-6">
                                 <button type="submit" id="startBtn" class="btn btn-success btn-sm w-100">
-                                    Lancer le dialogue sur Tech&Fest
+                                    Lancer le dialogue sur le congrès Eau & IA
                                 </button>
                             </div>
                         </div>
@@ -150,7 +150,7 @@
                     <div id="chatMessages" class="chat-messages">
                         <div class="text-center text-muted py-5">
                             <p>Le dialogue apparaîtra ici...</p>
-                            <p class="small">Cliquez sur "Lancer le dialogue sur Tech&Fest"</p>
+                            <p class="small">Cliquez sur "Lancer le dialogue sur le congrès Eau & IA"</p>
                         </div>
                     </div>
                 </div>
@@ -361,8 +361,8 @@
 
     const MODEL_COLORS = ['model-0', 'model-1', 'model-2'];
 
-    // Contexte Tech&Fest prédéfini
-    const TECHFEST_CONTEXT = `Parle-moi de l'événement Tech&Fest qui se déroule à Grenoble.
+    // Contexte EAUIA prédéfini
+    const EAUIA_CONTEXT = `Parle-moi de l'événement Tech&Fest qui se déroule à Grenoble.
 
 Voici les informations connues :
 • C'est le festival de l'innovation et de la tech qui aura lieu les 4 et 5 février 2026 à Alpexpo, Grenoble (France).
@@ -421,7 +421,7 @@ Présente cet événement en style informatif et attractif pour un public intér
         chatMessages.innerHTML = `
             <div class="text-center text-muted py-5">
                 <p>Le dialogue apparaîtra ici...</p>
-                <p class="small">Cliquez sur "Lancer le dialogue sur Tech&Fest"</p>
+                <p class="small">Cliquez sur "Lancer le dialogue sur le congrès Eau & IA"</p>
             </div>
         `;
         conversationHistory = [];
@@ -484,7 +484,7 @@ Présente cet événement en style informatif et attractif pour un public intér
 
         conversationHistory.push({
             model: 'system',
-            content: TECHFEST_CONTEXT + `\n\nRÈGLES STRICTES:
+            content: EAUIA_CONTEXT + `\n\nRÈGLES STRICTES:
 - Répondez en UNE SEULE PHRASE COURTE (15 mots max)
 - INTERDIT de répéter ce que les autres ont dit
 - Ajoutez une NOUVELLE information ou un NOUVEL aspect
