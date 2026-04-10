@@ -9,26 +9,26 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 
-# Configuration des Raspberry Pi
+# Raspberry Pi configuration
 RASPBERRIES = [
     {
-        "name": "Refroidissement passif ♨️",
+        "name": "Passive cooling ♨️",
         "temp_url": "http://192.168.137.10:8000/metrics/temperature",
         "ollama_url": "http://192.168.137.10:8000/ollama/generate",
     },
     {
-        "name": "Refroidissement actif air 🍃",
+        "name": "Active air cooling 🍃",
         "temp_url": "http://192.168.137.11:8000/metrics/temperature",
         "ollama_url": "http://192.168.137.11:8000/ollama/generate",
     },
     {
-         "name": "Refroidissement actif eau 💧",
+         "name": "Active water cooling 💧",
          "temp_url": "http://192.168.137.12:8000/metrics/temperature",
          "ollama_url": "http://192.168.137.12:8000/ollama/generate",
     },
 ]
 
-# État du jeu en mémoire (pour une vraie app, utiliser cache Django ou Redis)
+# In-memory game state (for a real app, use Django cache or Redis)
 current_game = {
     "started_at": None,
     "prompt": None,
@@ -39,19 +39,19 @@ current_game = {
     "window_end": None,
 }
 
-# Échantillons de température en mémoire
+# In-memory temperature samples
 temperature_samples = []
 
 
 def estimate_tokens(text):
-    """Estime le nombre de tokens à partir du texte (environ 4 caractères par token)"""
+    """Estimate token count from text (roughly 4 characters per token)"""
     if not text:
         return 0
     return max(1, len(text) // 4)
 
 
 def call_ollama(rpi, prompt, model="gemma3:270m"):
-    """Appelle Ollama sur un Raspberry Pi donné. Retourne (name, response, token_count)"""
+    """Call Ollama on a given Raspberry Pi. Returns (name, response, token_count)"""
     name = rpi["name"]
     url = rpi["ollama_url"]
     print(model)
@@ -60,17 +60,17 @@ def call_ollama(rpi, prompt, model="gemma3:270m"):
         res = requests.post(url, json=payload, timeout=120)
         res.raise_for_status()
         resp_json = res.json()
-        response = resp_json.get("response", "(aucune réponse)")
-        # Utilise eval_count si disponible, sinon estime à partir de la réponse
+        response = resp_json.get("response", "(no response)")
+        # Use eval_count if available, otherwise estimate from response
         token_count = resp_json.get("eval_count") or estimate_tokens(response)
         return name, response, token_count
     except Exception as e:
-        print(f"Erreur appel Ollama pour {name} ({url}): {e}")
-        return name, f"🔥🤯 Surchauffe !!", 0
+        print(f"Ollama call error for {name} ({url}): {e}")
+        return name, f"🔥🤯 Overheating!!", 0
 
 
 def fetch_temperatures():
-    """Récupère les températures de tous les Raspberry Pi"""
+    """Fetch temperatures from all Raspberry Pis"""
     temps = {}
     for rpi in RASPBERRIES:
         name = rpi["name"]
@@ -81,7 +81,7 @@ def fetch_temperatures():
             data = res.json()
             temps[name] = data.get("temperature_c")
         except Exception as e:
-            print(f"Erreur pour {name} ({url}): {e}")
+            print(f"Error for {name} ({url}): {e}")
             temps[name] = None
     return temps
 
@@ -91,7 +91,7 @@ class HomeView(TemplateView):
 
 
 class GameView(TemplateView):
-    """Vue principale du jeu"""
+    """Main game view"""
     template_name = "dashboard/game.html"
 
     def get_context_data(self, **kwargs):
@@ -127,14 +127,14 @@ class LeaderboardView(ListView):
 
 @require_http_methods(["GET"])
 def api_temperatures(request):
-    """Retourne les températures actuelles de tous les Raspberry Pi"""
+    """Return current temperatures from all Raspberry Pis"""
     temps = fetch_temperatures()
     now = time.time()
 
-    # Stocke l'échantillon
+    # Store sample
     temperature_samples.append((now, temps))
 
-    # Nettoyage : garde les 10 dernières minutes max
+    # Cleanup: keep last 10 minutes max
     cutoff = now - 600
     while temperature_samples and temperature_samples[0][0] < cutoff:
         temperature_samples.pop(0)
@@ -148,23 +148,23 @@ def api_temperatures(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def api_start_game(request):
-    """Lance une nouvelle partie du jeu"""
+    """Start a new game round"""
     global current_game
 
     try:
         data = json.loads(request.body)
         prompt = data.get("prompt", "")
         predictions = data.get("predictions", {}) or {}
-        player_name = data.get("player_name", "Joueur")
+        player_name = data.get("player_name", "Player")
         model = data.get("model", "gemma3:270m")
 
-        # Début de la fenêtre : juste avant l'envoi des prompts
+        # Window start: just before sending prompts
         window_start = time.time()
 
         ollama_responses = {}
         token_counts = {}
 
-        # Appels Ollama en parallèle
+        # Parallel Ollama calls
         with ThreadPoolExecutor(max_workers=len(RASPBERRIES)) as executor:
             futures = [
                 executor.submit(call_ollama, rpi, prompt, model)
@@ -177,7 +177,7 @@ def api_start_game(request):
                 token_counts[name] = token_count
 
         last_response_at = time.time()
-        window_end = last_response_at + 10.0  # 10s après la fin de l'inférence
+        window_end = last_response_at + 10.0  # 10s after inference ends
 
         current_game["prompt"] = prompt
         current_game["predictions"] = predictions
@@ -190,22 +190,22 @@ def api_start_game(request):
 
         return JsonResponse({
             "status": "started",
-            "countdown_seconds": 10,  # Compte à rebours fixe de 10 secondes
+            "countdown_seconds": 10,  # Fixed 10-second countdown
             "ollama_responses": ollama_responses,
             "token_counts": token_counts,
         })
 
     except Exception as e:
-        print(f"Erreur dans api_start_game: {e}")
+        print(f"Error in api_start_game: {e}")
         return JsonResponse({
             "status": "error",
-            "message": f"Exception côté serveur: {str(e)}"
+            "message": f"Server exception: {str(e)}"
         }, status=500)
 
 
 @require_http_methods(["GET"])
 def api_game_status(request):
-    """Retourne le statut actuel du jeu"""
+    """Return current game status"""
     window_start = current_game.get("window_start")
     window_end = current_game.get("window_end")
 
@@ -223,7 +223,7 @@ def api_game_status(request):
             "token_counts": current_game.get("token_counts"),
         })
 
-    # Fenêtre terminée → calcul des max à partir de l'historique
+    # Window ended → compute max values from history
     relevant_samples = [
         temps for (ts, temps) in temperature_samples
         if window_start <= ts <= window_end
@@ -261,19 +261,19 @@ def api_game_status(request):
         errors[name] = err
         score += max(0.0, 10.0 - err)
 
-    # Sauvegarder dans la base de données
-    player_name = current_game.get("player_name", "Joueur")
+    # Save to database
+    player_name = current_game.get("player_name", "Player")
     prompt = current_game.get("prompt", "")
     ollama_responses = current_game.get("ollama_responses", {})
 
-    # Mapper les noms aux champs du modèle
+    # Map names to model fields
     rpi_mapping = {
-        "Refroidissement passif ♨️": (1, "pi1"),
-        "Refroidissement actif air 🍃": (2, "pi2"),
-        "Refroidissement actif eau 💧": (3, "pi3"),
+        "Passive cooling ♨️": (1, "pi1"),
+        "Active air cooling 🍃": (2, "pi2"),
+        "Active water cooling 💧": (3, "pi3"),
     }
 
-    # Préparer les données pour la sauvegarde
+    # Prepare data for saving
     entry_data = {
         "pseudo": player_name,
         "points": int(score),
@@ -284,25 +284,25 @@ def api_game_status(request):
         if rpi_name in rpi_mapping:
             _, field_suffix = rpi_mapping[rpi_name]
 
-            # Prédiction
+            # Prediction
             try:
                 pred_value = float(predictions.get(rpi_name))
                 entry_data[f"predicted_temp_{field_suffix}"] = pred_value
             except (TypeError, ValueError):
                 pass
 
-            # Température max
+            # Max temperature
             if max_temps.get(rpi_name) is not None:
                 entry_data[f"max_temp_{field_suffix}"] = max_temps[rpi_name]
 
-            # Réponse Ollama
+            # Ollama response
             if ollama_responses.get(rpi_name):
                 entry_data[f"answer_{field_suffix}"] = ollama_responses[rpi_name]
 
-    # Créer l'entrée dans la base de données
+    # Create database entry
     LeaderboardEntry.objects.create(**entry_data)
 
-    # Récupérer le top 3
+    # Retrieve top 3
     top3 = LeaderboardEntry.objects.all()[:3]
     top3_data = [
         {
@@ -328,7 +328,7 @@ def api_game_status(request):
 # ==================== Dialogue entre modèles ====================
 
 class DialogueView(TemplateView):
-    """Vue pour le dialogue entre modèles"""
+    """View for the model dialogue"""
     template_name = "dashboard/dialogue.html"
 
     def get_context_data(self, **kwargs):
@@ -340,7 +340,7 @@ class DialogueView(TemplateView):
 @csrf_exempt
 @require_http_methods(["POST"])
 def api_dialogue_next(request):
-    """Génère la prochaine réponse dans le dialogue"""
+    """Generate the next response in the dialogue"""
     try:
         data = json.loads(request.body)
         model = data.get("model", "gemma3:270m")
@@ -350,13 +350,13 @@ def api_dialogue_next(request):
         if not RASPBERRIES:
             return JsonResponse({
                 "status": "error",
-                "message": "Aucun Raspberry Pi configuré"
+                "message": "No Raspberry Pi configured"
             }, status=400)
 
-        # Sélectionner le Raspberry Pi pour ce tour
+        # Select the Raspberry Pi for this turn
         rpi = RASPBERRIES[model_index % len(RASPBERRIES)]
 
-        # Construire le prompt avec l'historique de conversation
+        # Build prompt with conversation history
         prompt_parts = []
         previous_responses = []
 
@@ -367,12 +367,12 @@ def api_dialogue_next(request):
                 previous_responses.append(msg['content'])
 
         if previous_responses:
-            prompt_parts.append("\n--- DÉJÀ DIT (NE PAS RÉPÉTER) ---")
+            prompt_parts.append("\n--- ALREADY SAID (DO NOT REPEAT) ---")
             for i, resp in enumerate(previous_responses, 1):
                 prompt_parts.append(f"{i}. {resp}")
-            prompt_parts.append("--- FIN ---\n")
+            prompt_parts.append("--- END ---\n")
 
-        prompt_parts.append(f"Votre réponse (une seule phrase nouvelle) :")
+        prompt_parts.append(f"Your response (one new sentence only):")
         full_prompt = "\n".join(prompt_parts)
 
         # Appeler Ollama
@@ -386,21 +386,21 @@ def api_dialogue_next(request):
         })
 
     except Exception as e:
-        print(f"Erreur dans api_dialogue_next: {e}")
+        print(f"Error in api_dialogue_next: {e}")
         return JsonResponse({
             "status": "error",
             "message": str(e)
         }, status=500)
 
 
-# ==================== Puissance instantanée ====================
+# ==================== Instantaneous power ====================
 
 SMART_PLUG_URL = "http://10.23.206.35/cm?cmnd=Status%208"
 
 
 @require_http_methods(["GET"])
 def api_power(request):
-    """Récupère la puissance instantanée depuis la prise connectée"""
+    """Fetch instantaneous power from the smart plug"""
     try:
         res = requests.get(SMART_PLUG_URL, timeout=2)
         res.raise_for_status()
@@ -413,7 +413,7 @@ def api_power(request):
             "current": energy.get("Current"),
         })
     except Exception as e:
-        print(f"Erreur récupération puissance: {e}")
+        print(f"Error fetching power: {e}")
         return JsonResponse({
             "status": "error",
             "message": str(e)

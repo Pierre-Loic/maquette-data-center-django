@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Jeu des températures – Raspberry Pi{% endblock %}
+{% block title %}Temperature Game – Raspberry Pi{% endblock %}
 
 {% block content %}
 <style>
@@ -13,7 +13,7 @@
         font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
-    /* Force la page à sortir du conteneur parent et prendre toute la largeur */
+    /* Force page out of parent container and take full width */
     main.flex-grow-1 {
         padding: 0 !important;
     }
@@ -148,22 +148,22 @@
     <div class="dashboard-main container-fluid py-2">
         <div class="row h-100 g-3">
 
-            <!-- ======================= GRAPHIQUE ======================= -->
+            <!-- ======================= CHART ======================= -->
             <div class="col-lg-8 d-flex">
                 <div class="card card-fullheight shadow-sm w-100">
                     <div class="card-body d-flex flex-column">
                         <div class="mb-2 d-flex justify-content-between align-items-start flex-wrap gap-2">
                             <div>
-                                <h2 class="h5 card-title mb-1">Températures en temps réel</h2>
-                                <p class="text-muted mb-0">Actualisation toutes les 2 secondes.</p>
+                                <h2 class="h5 card-title mb-1">Real-time temperatures</h2>
+                                <p class="text-muted mb-0">Updated every 2 seconds.</p>
                             </div>
                             <div class="d-flex align-items-center gap-2">
                                 <div id="powerDisplay" class="power-display inactive">
-                                    <span>Puissance :</span>
+                                    <span>Power:</span>
                                     <span id="powerValue" class="power-value">-- W</span>
                                 </div>
                                 <button id="powerToggle" class="btn btn-outline-warning btn-sm">
-                                    Activer
+                                    Enable
                                 </button>
                             </div>
                         </div>
@@ -179,32 +179,32 @@
                 </div>
             </div>
 
-            <!-- ======================= FORMULAIRE DU JEU ======================= -->
+            <!-- ======================= GAME FORM ======================= -->
             <div class="col-lg-4 d-flex">
                 <div class="card card-fullheight shadow-sm w-100">
                     <div class="card-body card-body-scroll">
-                        <h2 class="h5 card-title mb-3">Votre prédiction</h2>
+                        <h2 class="h5 card-title mb-3">Your prediction</h2>
 
                         <form id="gameForm" novalidate>
                             <div class="mb-3">
-                                <label for="playerName" class="form-label">Prénom du joueur</label>
+                                <label for="playerName" class="form-label">Player name</label>
                                 <input type="text" id="playerName" class="form-control" required>
                             </div>
 
                             <div class="mb-3">
-                                <label for="modelSelect" class="form-label">Choix du modèle</label>
+                                <label for="modelSelect" class="form-label">Model selection</label>
                                 <select id="modelSelect" class="form-select" required>
-                                    <option value="gemma3:270m" data-size="petit">🇺🇸 Gemma3:270m (Petit modèle)</option>
-                                    <option value="qwen3:0.6b" data-size="petit">🇨🇳 Qwen3:0.6b (Petit modèle)</option>
-                                    <option value="falcon3:1b" data-size="moyen">🇦🇪 Falcon3:1b (Moyen modèle)</option>
-                                    <option value="llama3.2:1b" data-size="moyen">🇺🇸 Llama3.2:1b (Moyen modèle)</option>
-                                    <option value="deepseek-r1:1.5b" data-size="grand">🇨🇳 DeepSeek R1:1.5b (Grand modèle)</option>
-                                    <option value="ministral-3:3b" data-size="grand">🇫🇷 Ministral-3:3b (Grand modèle)</option>
+                                    <option value="gemma3:270m" data-size="small">🇺🇸 Gemma3:270m (Small model)</option>
+                                    <option value="qwen3:0.6b" data-size="small">🇨🇳 Qwen3:0.6b (Small model)</option>
+                                    <option value="falcon3:1b" data-size="medium">🇦🇪 Falcon3:1b (Medium model)</option>
+                                    <option value="llama3.2:1b" data-size="medium">🇺🇸 Llama3.2:1b (Medium model)</option>
+                                    <option value="deepseek-r1:1.5b" data-size="large">🇨🇳 DeepSeek R1:1.5b (Large model)</option>
+                                    <option value="ministral-3:3b" data-size="large">🇫🇷 Ministral-3:3b (Large model)</option>
                                 </select>
                             </div>
 
                             <div class="mb-3">
-                                <label class="form-label">Températures maximales prévues (°C)</label>
+                                <label class="form-label">Predicted maximum temperatures (°C)</label>
                                 <div class="row g-2">
                                     {% for name in raspberries %}
                                         <div class="col-12">
@@ -223,28 +223,28 @@
                             </div>
 
                             <div class="mb-3">
-                                <label for="prompt" class="form-label">Prompt envoyé au modèle</label>
+                                <label for="prompt" class="form-label">Prompt sent to the model</label>
                                 <select id="prompt" class="form-select" required>
-                                    <option value="">-- Choisissez un prompt --</option>
-                                    <option value="Quel mot définit le mieux Grenoble ?">📝 Grenoble en un mot</option>
-                                    <option value="De quand date le téléphérique de la Bastille ?">⚡ Téléphérique Bastille</option>
-                                    <option value="Écris un poème sur une IA qui essaie de skier à l'Alpe d'Huez mais qui tombe tout le temps.">❄️ Poème IA ski</option>
-                                    <option value="Raconte l'histoire d'un robot qui se perd dans les ruelles du vieux Grenoble et qui demande son chemin à ChatGPT.">🤖 Robot perdu Grenoble</option>
+                                    <option value="">-- Choose a prompt --</option>
+                                    <option value="What word best defines Grenoble?">📝 Grenoble in one word</option>
+                                    <option value="When was the Bastille cable car built?">⚡ Bastille cable car</option>
+                                    <option value="Write a poem about an AI trying to ski at Alpe d'Huez but keeps falling.">❄️ AI ski poem</option>
+                                    <option value="Tell the story of a robot that gets lost in the old streets of Grenoble and asks ChatGPT for directions.">🤖 Lost robot in Grenoble</option>
                                 </select>
 
-                                <!-- Affichage du prompt sélectionné -->
+                                <!-- Selected prompt preview -->
                                 <div id="promptPreview" class="mt-2 p-2 bg-light border rounded d-none">
-                                    <small class="text-muted d-block mb-1">Prompt qui sera envoyé :</small>
+                                    <small class="text-muted d-block mb-1">Prompt to be sent:</small>
                                     <div id="promptPreviewText" class="small fst-italic"></div>
                                 </div>
                             </div>
 
                             <button type="submit" id="submitBtn" class="btn btn-success w-100">
-                                Lancer le jeu
+                                Start game
                             </button>
 
                             <div id="countdownTimer" class="mt-3 d-none text-center">
-                                <div class="fw-semibold small text-muted mb-1">Temps restant</div>
+                                <div class="fw-semibold small text-muted mb-1">Time remaining</div>
                                 <div id="countdownValue" class="display-6 lh-1">-- s</div>
                                 <div class="progress mt-2" style="height: 0.5rem;">
                                     <div id="countdownProgress"
@@ -304,8 +304,8 @@
             responsive: true,
             maintainAspectRatio: false,
             scales: {
-                y: { title: { display: true, text: 'Température (°C)' } },
-                x: { title: { display: true, text: 'Temps' } }
+                y: { title: { display: true, text: 'Temperature (°C)' } },
+                x: { title: { display: true, text: 'Time' } }
             }
         }
     };
@@ -322,10 +322,10 @@
             <div class="rpi-block card h-100">
                 <div class="card-body p-2">
                     <h3 class="h6">${name}</h3>
-                    <p class="rpi-max-temp text-muted">Température max pendant l'inférence : -- °C</p>
-                    <p class="rpi-token-count text-muted">Tokens générés (estimation) : --</p>
-                    <h4 class="h6">Réponse du modèle</h4>
-                    <div class="rpi-response"><em>(en attente...)</em></div>
+                    <p class="rpi-max-temp text-muted">Max temperature during inference: -- °C</p>
+                    <p class="rpi-token-count text-muted">Generated tokens (estimate): --</p>
+                    <h4 class="h6">Model response</h4>
+                    <div class="rpi-response"><em>(waiting...)</em></div>
                 </div>
             </div>
         `;
@@ -338,9 +338,9 @@
             const block = rpiBlocks[name];
             if (!block) return;
             const p = block.querySelector('.rpi-max-temp');
-            p.textContent = "Température max pendant l'inférence : -- °C";
+            p.textContent = "Max temperature during inference: -- °C";
             const pTokens = block.querySelector('.rpi-token-count');
-            pTokens.textContent = "Tokens générés (estimation) : --";
+            pTokens.textContent = "Generated tokens (estimate): --";
         });
     }
 
@@ -352,9 +352,9 @@
             const p = block.querySelector('.rpi-token-count');
             const value = tokenCounts[name];
             if (value == null) {
-                p.textContent = "Tokens générés (estimation) : N/A";
+                p.textContent = "Generated tokens (estimate): N/A";
             } else {
-                p.textContent = `Tokens générés (estimation) : ${value}`;
+                p.textContent = `Generated tokens (estimate): ${value}`;
             }
         }
     }
@@ -367,9 +367,9 @@
             const p = block.querySelector('.rpi-max-temp');
             const value = actualTemps[name];
             if (value == null) {
-                p.textContent = "Température max pendant l'inférence : N/A";
+                p.textContent = "Max temperature during inference: N/A";
             } else {
-                p.textContent = `Température max pendant l'inférence : ${value.toFixed(1)} °C`;
+                p.textContent = `Max temperature during inference: ${value.toFixed(1)} °C`;
             }
         }
     }
@@ -391,14 +391,14 @@
 
             tempChart.update();
         } catch (err) {
-            console.error('Erreur en récupérant les températures:', err);
+            console.error('Error fetching temperatures:', err);
         }
     }
 
     fetchTemperatures();
     setInterval(fetchTemperatures, 2000);
 
-    // ----------------------- PUISSANCE INSTANTANÉE -----------------------
+    // ----------------------- INSTANTANEOUS POWER -----------------------
     const powerDisplay = document.getElementById('powerDisplay');
     const powerValue = document.getElementById('powerValue');
     const powerToggle = document.getElementById('powerToggle');
@@ -413,11 +413,11 @@
             if (json.status === 'success' && json.power != null) {
                 powerValue.textContent = `${json.power} W`;
             } else {
-                powerValue.textContent = 'Erreur';
+                powerValue.textContent = 'Error';
             }
         } catch (err) {
-            console.error('Erreur en récupérant la puissance:', err);
-            powerValue.textContent = 'Erreur';
+            console.error('Error fetching power:', err);
+            powerValue.textContent = 'Error';
         }
     }
 
@@ -425,14 +425,14 @@
         powerEnabled = !powerEnabled;
         if (powerEnabled) {
             powerDisplay.classList.remove('inactive');
-            powerToggle.textContent = 'Désactiver';
+            powerToggle.textContent = 'Disable';
             powerToggle.classList.remove('btn-outline-warning');
             powerToggle.classList.add('btn-warning');
             fetchPower();
             powerInterval = setInterval(fetchPower, 2000);
         } else {
             powerDisplay.classList.add('inactive');
-            powerToggle.textContent = 'Activer';
+            powerToggle.textContent = 'Enable';
             powerToggle.classList.remove('btn-warning');
             powerToggle.classList.add('btn-outline-warning');
             powerValue.textContent = '-- W';
@@ -445,7 +445,7 @@
 
     powerToggle.addEventListener('click', togglePower);
 
-    // ----------------------- JEU + COMPTE À REBOURS + CLASSEMENT -----------------------
+    // ----------------------- GAME + COUNTDOWN + LEADERBOARD -----------------------
     const gameForm = document.getElementById('gameForm');
     const gameStatusDiv = document.getElementById('gameStatus');
     const ollamaResponsesDiv = document.getElementById('ollamaResponses');
@@ -467,7 +467,7 @@
                 const block = rpiBlocks[name];
                 if (!block) return;
                 const container = block.querySelector('.rpi-response');
-                container.innerHTML = '<em>(en attente...)</em>';
+                container.innerHTML = '<em>(waiting...)</em>';
             });
             if (ollamaResponsesDiv) {
                 ollamaResponsesDiv.textContent = '';
@@ -476,11 +476,11 @@
         }
 
         raspberries.forEach((name) => {
-            const text = responses[name] ?? '(aucune réponse)';
+            const text = responses[name] ?? '(no response)';
             const block = rpiBlocks[name];
             if (!block) return;
             const container = block.querySelector('.rpi-response');
-            // Convertir le markdown en HTML
+            // Convert markdown to HTML
             container.innerHTML = marked.parse(text);
         });
 
@@ -568,26 +568,25 @@
         }
 
         let rankingHtml = '';
-        // Utiliser le top3 reçu du backend
         if (json.top3 && json.top3.length > 0) {
-            rankingHtml += '<p class="mb-1 fw-semibold">🏆 Meilleurs scores</p>';
+            rankingHtml += '<p class="mb-1 fw-semibold">🏆 Top scores</p>';
             rankingHtml += '<ol class="mb-0">';
             json.top3.forEach((entry) => {
-                rankingHtml += `<li>${entry.name || 'Joueur'} – <strong>${entry.score} pts</strong></li>`;
+                rankingHtml += `<li>${entry.name || 'Player'} – <strong>${entry.score} pts</strong></li>`;
             });
             rankingHtml += '</ol>';
         }
 
-        const playerLabel = currentPlayerName || 'Joueur';
+        const playerLabel = currentPlayerName || 'Player';
 
         const html = `
             <div class="alert alert-info mt-2 mb-0" role="alert">
-                <h5 class="alert-heading mb-2">Partie terminée 🎉</h5>
+                <h5 class="alert-heading mb-2">Game over 🎉</h5>
                 <p class="mb-1">
-                    <strong>${playerLabel}</strong>, votre score est de
+                    <strong>${playerLabel}</strong>, your score is
                     <strong>${json.score.toFixed(1)} points</strong>.
                 </p>
-                <p class="mb-2">Erreurs de température par Raspberry Pi (en %) :</p>
+                <p class="mb-2">Temperature errors per Raspberry Pi (in %):</p>
                 ${errorsHtml}
                 ${rankingHtml}
             </div>
@@ -601,25 +600,25 @@
     function validateForm() {
         const errors = [];
 
-        // Vérifier le prénom
+        // Check player name
         const playerName = document.getElementById('playerName').value.trim();
         if (!playerName) {
-            errors.push('Veuillez entrer votre prénom');
+            errors.push('Please enter your name');
             document.getElementById('playerName').classList.add('is-invalid');
         } else {
             document.getElementById('playerName').classList.remove('is-invalid');
         }
 
-        // Vérifier le modèle
+        // Check model
         const model = document.getElementById('modelSelect').value;
         if (!model) {
-            errors.push('Veuillez choisir un modèle');
+            errors.push('Please choose a model');
             document.getElementById('modelSelect').classList.add('is-invalid');
         } else {
             document.getElementById('modelSelect').classList.remove('is-invalid');
         }
 
-        // Vérifier les températures prédites
+        // Check predicted temperatures
         let allTempsValid = true;
         raspberries.forEach((name) => {
             const input = document.querySelector(`input[data-name="${name}"]`);
@@ -634,13 +633,13 @@
             }
         });
         if (!allTempsValid) {
-            errors.push('Veuillez entrer toutes les températures prédites');
+            errors.push('Please enter all predicted temperatures');
         }
 
-        // Vérifier le prompt
+        // Check prompt
         const prompt = document.getElementById('prompt').value;
         if (!prompt) {
-            errors.push('Veuillez choisir un prompt');
+            errors.push('Please choose a prompt');
             document.getElementById('prompt').classList.add('is-invalid');
         } else {
             document.getElementById('prompt').classList.remove('is-invalid');
@@ -652,12 +651,12 @@
     gameForm.addEventListener('submit', async (event) => {
         event.preventDefault();
 
-        // Validation du formulaire
+        // Form validation
         const validationErrors = validateForm();
         if (validationErrors.length > 0) {
             gameStatusDiv.innerHTML = `
                 <div class="alert alert-warning py-2" role="alert">
-                    <strong>Formulaire incomplet :</strong>
+                    <strong>Incomplete form:</strong>
                     <ul class="mb-0 mt-1">
                         ${validationErrors.map(e => `<li>${e}</li>`).join('')}
                     </ul>
@@ -666,15 +665,15 @@
             return;
         }
 
-        // Désactiver le bouton
+        // Disable button
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Calcul en cours...';
+        submitBtn.textContent = 'Processing...';
         gameStatusDiv.innerHTML = '';
 
         const prompt = document.getElementById('prompt').value;
         const predictions = {};
         const playerNameInput = document.getElementById('playerName');
-        currentPlayerName = (playerNameInput.value || '').trim() || 'Joueur';
+        currentPlayerName = (playerNameInput.value || '').trim() || 'Player';
 
         raspberries.forEach((name) => {
             const input = document.querySelector(`input[data-name="${name}"]`);
@@ -705,9 +704,9 @@
                 resetMaxTempDisplay();
                 updateTokenCounts(json.token_counts);
 
-                gameStatusDiv.textContent = `Réponses reçues ! Mesure de la température en cours...`;
+                gameStatusDiv.textContent = `Responses received! Measuring temperature...`;
 
-                // Démarrer le compte à rebours de 10 secondes
+                // Start 10-second countdown
                 if (json.countdown_seconds != null) {
                     startCountdown(json.countdown_seconds);
                 } else {
@@ -716,17 +715,17 @@
 
                 startPollingGameStatus();
             } else {
-                gameStatusDiv.textContent = 'Impossible de lancer la partie.';
-                // Réactiver le bouton en cas d'erreur
+                gameStatusDiv.textContent = 'Unable to start the game.';
+                // Re-enable button on error
                 submitBtn.disabled = false;
-                submitBtn.textContent = 'Lancer le jeu';
+                submitBtn.textContent = 'Start game';
             }
         } catch (err) {
-            console.error('Erreur start_game:', err);
-            gameStatusDiv.textContent = 'Erreur lors du lancement de la partie.';
-            // Réactiver le bouton en cas d'erreur
+            console.error('Error start_game:', err);
+            gameStatusDiv.textContent = 'Error starting the game.';
+            // Re-enable button on error
             submitBtn.disabled = false;
-            submitBtn.textContent = 'Lancer le jeu';
+            submitBtn.textContent = 'Start game';
         }
     });
 
@@ -738,7 +737,7 @@
             if (json.status === 'no_game') return;
 
             if (json.status === 'waiting') {
-                gameStatusDiv.textContent = `Mesure de la température pendant l'inférence...`;
+                gameStatusDiv.textContent = `Measuring temperature during inference...`;
                 renderOllamaResponses(json.ollama_responses);
                 updateTokenCounts(json.token_counts);
             }
@@ -755,13 +754,13 @@
                 updateMaxTempsFromBackend(json.actual_temperatures);
                 updateTokenCounts(json.token_counts);
 
-                // Réactiver le bouton une fois la partie terminée
+                // Re-enable button once game is finished
                 submitBtn.disabled = false;
-                submitBtn.textContent = 'Lancer le jeu';
+                submitBtn.textContent = 'Start game';
             }
 
         } catch (err) {
-            console.error('Erreur game_status:', err);
+            console.error('Error game_status:', err);
         }
     }
 
@@ -777,7 +776,7 @@
         selectedModel = modelSelect.value;
     });
 
-    // Affichage du prompt sélectionné
+    // Display selected prompt
     const promptSelect = document.getElementById('prompt');
     const promptPreview = document.getElementById('promptPreview');
     const promptPreviewText = document.getElementById('promptPreviewText');

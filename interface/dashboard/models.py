@@ -37,23 +37,23 @@ class LeaderboardEntry(models.Model):
     @property
     def predicted_temps(self):
         return {
-            "Refroidissement passif air": self.predicted_temp_pi1,
-            "Refroidissement actif air": self.predicted_temp_pi2,
-            "Refroidissement actif eau": self.predicted_temp_pi3,
+            "Passive air cooling": self.predicted_temp_pi1,
+            "Active air cooling": self.predicted_temp_pi2,
+            "Active water cooling": self.predicted_temp_pi3,
         }
 
     @property
     def max_temps(self):
         return {
-            "Refroidissement passif air": self.max_temp_pi1,
-            "Refroidissement actif air": self.max_temp_pi2,
-            "Refroidissement actif eau": self.max_temp_pi3,
+            "Passive air cooling": self.max_temp_pi1,
+            "Active air cooling": self.max_temp_pi2,
+            "Active water cooling": self.max_temp_pi3,
         }
 
     @property
     def answers(self):
         return {
-            "Refroidissement passif air": self.answer_pi1,
-            "Refroidissement actif air": self.answer_pi2,
-            "Refroidissement actif eau": self.answer_pi3,
+            "Passive air cooling": self.answer_pi1,
+            "Active air cooling": self.answer_pi2,
+            "Active water cooling": self.answer_pi3,
         }

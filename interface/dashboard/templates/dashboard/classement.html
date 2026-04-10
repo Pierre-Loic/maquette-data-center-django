@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Classement{% endblock %}
+{% block title %}Leaderboard{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
@@ -10,8 +10,8 @@
 
             <!-- En-tête -->
             <div class="text-center mb-4">
-                <h1 class="display-4 mb-2">🏆 Classement des joueurs</h1>
-                <p class="text-muted">Les meilleurs scores de prédiction de température</p>
+                <h1 class="display-4 mb-2">🏆 Player leaderboard</h1>
+                <p class="text-muted">Top temperature prediction scores</p>
             </div>
 
             <!-- Podium des 3 premiers -->
@@ -40,7 +40,7 @@
             <!-- Tableau complet -->
             <div class="card shadow-sm">
                 <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">Tous les résultats</h5>
+                    <h5 class="mb-0">All results</h5>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
@@ -48,10 +48,10 @@
                             <thead class="table-light sticky-top">
                                 <tr>
                                     <th class="text-center" style="width: 80px;">#</th>
-                                    <th>Pseudo</th>
+                                    <th>Name</th>
                                     <th class="text-center" style="width: 100px;">Points</th>
-                                    <th>Prédictions (°C)</th>
-                                    <th>Températures max (°C)</th>
+                                    <th>Predictions (°C)</th>
+                                    <th>Max temperatures (°C)</th>
                                     <th style="width: 150px;">Date</th>
                                 </tr>
                             </thead>
@@ -97,7 +97,7 @@
                                 <tr>
                                     <td colspan="6" class="text-center py-5 text-muted">
                                         <div class="mb-2">🎮</div>
-                                        Aucune entrée pour le moment. Soyez le premier à jouer !
+                                        No entries yet. Be the first to play!
                                     </td>
                                 </tr>
                             {% endfor %}
@@ -109,17 +109,17 @@
                 <!-- Pagination -->
                 {% if is_paginated %}
                 <div class="card-footer">
-                    <nav aria-label="Navigation du classement">
+                    <nav aria-label="Leaderboard navigation">
                         <ul class="pagination justify-content-center mb-0">
                             {% if page_obj.has_previous %}
                                 <li class="page-item">
                                     <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
-                                        <span aria-hidden="true">&laquo;</span> Précédent
+                                        <span aria-hidden="true">&laquo;</span> Previous
                                     </a>
                                 </li>
                             {% else %}
                                 <li class="page-item disabled">
-                                    <span class="page-link">&laquo; Précédent</span>
+                                    <span class="page-link">&laquo; Previous</span>
                                 </li>
                             {% endif %}
 
@@ -138,12 +138,12 @@
                             {% if page_obj.has_next %}
                                 <li class="page-item">
                                     <a class="page-link" href="?page={{ page_obj.next_page_number }}">
-                                        Suivant <span aria-hidden="true">&raquo;</span>
+                                        Next <span aria-hidden="true">&raquo;</span>
                                     </a>
                                 </li>
                             {% else %}
                                 <li class="page-item disabled">
-                                    <span class="page-link">Suivant &raquo;</span>
+                                    <span class="page-link">Next &raquo;</span>
                                 </li>
                             {% endif %}
                         </ul>
@@ -155,7 +155,7 @@
             <!-- Lien pour jouer -->
             <div class="text-center mt-4">
                 <a href="{% url 'game' %}" class="btn btn-success btn-lg">
-                    🎮 Jouer maintenant
+                    🎮 Play now
                 </a>
             </div>
 

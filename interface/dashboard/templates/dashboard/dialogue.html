@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Dialogue entre modèles – Raspberry Pi{% endblock %}
+{% block title %}AI Model Dialogue – Raspberry Pi{% endblock %}
 
 {% block content %}
 <style>
@@ -109,23 +109,23 @@
 
 <div class="container-fluid py-2">
     <div class="row g-3">
-        <!-- ======================= DIALOGUE (gauche) ======================= -->
+        <!-- ======================= DIALOGUE (left) ======================= -->
         <div class="col-lg-8">
             <div class="card shadow-sm mb-3">
                 <div class="card-body pb-2">
-                    <h2 class="h5 card-title mb-2">Dialogue entre modèles IA</h2>
+                    <h2 class="h5 card-title mb-2">AI model dialogue</h2>
                     <p class="text-muted small mb-2">
-                        Les modèles dialoguent tour à tour sur le congrès Eau & intelligence artificielle.
+                        Models take turns discussing the Water & Artificial Intelligence Congress.
                     </p>
 
                     <div class="alert alert-info py-2 mb-3">
-                        <strong>Congrès Eau & intelligence artificielle</strong> — Les modèles IA vont discuter du congrès Eau & intelligence artificielle qui se déroule les 4, 5 et 6 mars à Grenoble.
+                        <strong>Water & Artificial Intelligence Congress</strong> — AI models will discuss the Water & Artificial Intelligence Congress taking place on March 4, 5 and 6 in Grenoble.
                     </div>
 
                     <form id="dialogueForm">
                         <div class="row g-2 align-items-end">
                             <div class="col-md-6">
-                                <label for="modelSelect" class="form-label small">Modèle utilisé</label>
+                                <label for="modelSelect" class="form-label small">Model used</label>
                                 <select id="modelSelect" class="form-select form-select-sm">
                                     <option value="gemma3:270m">Gemma3:270m</option>
                                     <option value="qwen3:0.6b">Qwen3:0.6b</option>
@@ -137,7 +137,7 @@
                             </div>
                             <div class="col-md-6">
                                 <button type="submit" id="startBtn" class="btn btn-success btn-sm w-100">
-                                    Lancer le dialogue sur le congrès Eau & IA
+                                    Start dialogue on the Water & AI Congress
                                 </button>
                             </div>
                         </div>
@@ -149,8 +149,8 @@
                 <div class="card-body p-2">
                     <div id="chatMessages" class="chat-messages">
                         <div class="text-center text-muted py-5">
-                            <p>Le dialogue apparaîtra ici...</p>
-                            <p class="small">Cliquez sur "Lancer le dialogue sur le congrès Eau & IA"</p>
+                            <p>The dialogue will appear here...</p>
+                            <p class="small">Click "Start dialogue on the Water & AI Congress"</p>
                         </div>
                     </div>
                 </div>
@@ -159,13 +159,13 @@
             <div class="card shadow-sm controls-card">
                 <div class="card-body py-2">
                     <div class="d-flex justify-content-between align-items-center">
-                        <div id="statusText" class="text-muted small">En attente...</div>
+                        <div id="statusText" class="text-muted small">Waiting...</div>
                         <div class="d-flex gap-2">
                             <button id="stopBtn" class="btn btn-danger btn-sm" disabled>
-                                Arrêter
+                                Stop
                             </button>
                             <button id="clearBtn" class="btn btn-outline-secondary btn-sm">
-                                Effacer
+                                Clear
                             </button>
                         </div>
                     </div>
@@ -173,13 +173,13 @@
             </div>
         </div>
 
-        <!-- ======================= MONITORING (droite) ======================= -->
+        <!-- ======================= MONITORING (right) ======================= -->
         <div class="col-lg-4">
             <div class="card shadow-sm mb-3">
                 <div class="card-body p-2">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h6 class="card-title mb-0">Températures</h6>
-                        <small class="text-muted">Temps réel</small>
+                        <h6 class="card-title mb-0">Temperatures</h6>
+                        <small class="text-muted">Real time</small>
                     </div>
                     <div class="sidebar-chart">
                         <canvas id="tempChart"></canvas>
@@ -190,7 +190,7 @@
             <div class="card shadow-sm mb-3">
                 <div class="card-body p-2">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h6 class="card-title mb-0">Valeurs actuelles</h6>
+                        <h6 class="card-title mb-0">Current values</h6>
                     </div>
                     <div id="currentTemps" class="small">
                         {% for name in raspberries %}
@@ -206,7 +206,7 @@
             <div class="card shadow-sm">
                 <div class="card-body p-2">
                     <div class="d-flex justify-content-between align-items-center">
-                        <h6 class="card-title mb-0">Puissance</h6>
+                        <h6 class="card-title mb-0">Power</h6>
                         <div class="d-flex align-items-center gap-2">
                             <div id="powerDisplay" class="power-display inactive">
                                 <span id="powerValue" class="power-value">-- W</span>
@@ -227,7 +227,7 @@
 <script>
     const raspberries = {{ raspberries|safe }};
 
-    // ----------------------- GRAPHIQUE TEMPÉRATURES -----------------------
+    // ----------------------- TEMPERATURE CHART -----------------------
     const ctx = document.getElementById('tempChart').getContext('2d');
     const labels = [];
 
@@ -284,7 +284,7 @@
                 dataset.data.push(temp);
                 if (dataset.data.length > 30) dataset.data.shift();
 
-                // Mise à jour des valeurs actuelles
+                // Update current values
                 const valueSpan = document.querySelector(`.temp-value[data-name="${name}"]`);
                 if (valueSpan) {
                     valueSpan.textContent = temp != null ? `${temp.toFixed(1)} °C` : '-- °C';
@@ -293,14 +293,14 @@
 
             tempChart.update();
         } catch (err) {
-            console.error('Erreur températures:', err);
+            console.error('Error temperatures:', err);
         }
     }
 
     fetchTemperatures();
     setInterval(fetchTemperatures, 2000);
 
-    // ----------------------- PUISSANCE -----------------------
+    // ----------------------- POWER -----------------------
     const powerDisplay = document.getElementById('powerDisplay');
     const powerValue = document.getElementById('powerValue');
     const powerToggle = document.getElementById('powerToggle');
@@ -361,19 +361,19 @@
 
     const MODEL_COLORS = ['model-0', 'model-1', 'model-2'];
 
-    // Contexte EAUIA prédéfini
-    const EAUIA_CONTEXT = `Parle-moi de l'événement Congrès Eau & IA qui se déroule en France à Grenoble.
+    // Predefined Water & AI Congress context
+    const EAUIA_CONTEXT = `Tell me about the Water & AI Congress event taking place in France, in Grenoble.
 
-Voici les informations connues :
+Here is the known information:
 
-• C'est un congrès dédié aux enjeux croisés de la gestion durable de l'eau, de la transformation numérique et de l'intelligence artificielle.
-• L'événement se déroule sur trois journées structurées autour des grands défis du secteur de l'eau et des apports stratégiques de l'IA.
-• Il réunit des décideurs publics et privés, des experts métiers, des chercheurs, des ingénieurs, des collectivités, des entreprises innovantes et des start-ups.
-• Le programme comprend des plénières, keynotes, sessions techniques et temps d'échange, permettant de croiser vision stratégique, retours d'expérience terrain et perspectives prospectives.
-• L'ambition du congrès est d'offrir une vision complète des innovations technologiques, des usages concrets de l'IA et des transformations numériques qui façonneront le futur du secteur de l'eau.
-• Les thématiques abordées incluent la performance des réseaux, la gestion des ressources, l'optimisation énergétique, la qualité de l'eau, la résilience face au changement climatique, la data et les algorithmes appliqués aux infrastructures critiques.
+• It is a congress dedicated to the cross-cutting challenges of sustainable water management, digital transformation, and artificial intelligence.
+• The event takes place over three days structured around the major challenges of the water sector and the strategic contributions of AI.
+• It brings together public and private decision-makers, sector experts, researchers, engineers, local authorities, innovative companies, and start-ups.
+• The program includes plenary sessions, keynotes, technical sessions, and networking time, allowing participants to combine strategic vision, field feedback, and forward-looking perspectives.
+• The congress aims to provide a comprehensive view of technological innovations, concrete uses of AI, and digital transformations that will shape the future of the water sector.
+• Topics covered include network performance, resource management, energy optimization, water quality, resilience to climate change, data, and algorithms applied to critical infrastructure.
 
-Présente cet événement dans un style informatif et attractif, à destination d'un public intéressé par la technologie, la transition écologique et l'innovation stratégique.`;
+Present this event in an informative and engaging style, targeting an audience interested in technology, ecological transition, and strategic innovation.`;
 
     function getCookie(name) {
         let cookieValue = null;
@@ -408,7 +408,7 @@ Présente cet événement dans un style informatif et attractif, à destination 
         thinkingDiv.className = 'thinking-indicator';
         thinkingDiv.innerHTML = `
             <div class="spinner-border text-secondary" role="status"></div>
-            <span>${modelName} réfléchit...</span>
+            <span>${modelName} is thinking...</span>
         `;
         chatMessages.appendChild(thinkingDiv);
         chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -422,8 +422,8 @@ Présente cet événement dans un style informatif et attractif, à destination 
     function clearChat() {
         chatMessages.innerHTML = `
             <div class="text-center text-muted py-5">
-                <p>Le dialogue apparaîtra ici...</p>
-                <p class="small">Cliquez sur "Lancer le dialogue sur le congrès Eau & IA"</p>
+                <p>The dialogue will appear here...</p>
+                <p class="small">Click "Start dialogue on the Water & AI Congress"</p>
             </div>
         `;
         conversationHistory = [];
@@ -435,7 +435,7 @@ Présente cet événement dans un style informatif et attractif, à destination 
 
         const currentModel = raspberries[currentModelIndex % raspberries.length];
         showThinking(currentModel);
-        statusText.textContent = `${currentModel} génère...`;
+        statusText.textContent = `${currentModel} generating...`;
 
         try {
             const csrftoken = getCookie('csrftoken');
@@ -462,19 +462,19 @@ Présente cet événement dans un style informatif et attractif, à destination 
                     content: json.response
                 });
                 currentModelIndex++;
-                statusText.textContent = `Tour ${conversationHistory.length}`;
+                statusText.textContent = `Turn ${conversationHistory.length}`;
 
                 if (isRunning) {
                     setTimeout(getNextResponse, 1000);
                 }
             } else {
-                statusText.textContent = `Erreur: ${json.message}`;
+                statusText.textContent = `Error: ${json.message}`;
                 stopDialogue();
             }
         } catch (err) {
             hideThinking();
-            console.error('Erreur dialogue:', err);
-            statusText.textContent = 'Erreur connexion';
+            console.error('Dialogue error:', err);
+            statusText.textContent = 'Connection error';
             stopDialogue();
         }
     }
@@ -486,11 +486,11 @@ Présente cet événement dans un style informatif et attractif, à destination 
 
         conversationHistory.push({
             model: 'system',
-            content: EAUIA_CONTEXT + `\n\nRÈGLES STRICTES:
-- Répondez en UNE SEULE PHRASE COURTE (15 mots max)
-- INTERDIT de répéter ce que les autres ont dit
-- Ajoutez une NOUVELLE information ou un NOUVEL aspect
-- Répondez UNIQUEMENT avec votre phrase, sans introduction`
+            content: EAUIA_CONTEXT + `\n\nSTRICT RULES:
+- Respond in ONE SHORT SENTENCE (15 words max)
+- FORBIDDEN to repeat what others have said
+- Add a NEW piece of information or a NEW aspect
+- Respond ONLY with your sentence, no introduction`
         });
 
         chatMessages.innerHTML = '';
@@ -498,7 +498,7 @@ Présente cet événement dans un style informatif et attractif, à destination 
         stopBtn.disabled = false;
         modelSelect.disabled = true;
 
-        statusText.textContent = 'Dialogue en cours...';
+        statusText.textContent = 'Dialogue running...';
         getNextResponse();
     }
 
@@ -507,7 +507,7 @@ Présente cet événement dans un style informatif et attractif, à destination 
         startBtn.disabled = false;
         stopBtn.disabled = true;
         modelSelect.disabled = false;
-        statusText.textContent = 'Dialogue arrêté';
+        statusText.textContent = 'Dialogue stopped';
     }
 
     dialogueForm.addEventListener('submit', (e) => {
@@ -519,7 +519,7 @@ Présente cet événement dans un style informatif et attractif, à destination 
     clearBtn.addEventListener('click', () => {
         stopDialogue();
         clearChat();
-        statusText.textContent = 'En attente...';
+        statusText.textContent = 'Waiting...';
     });
 </script>
 {% endblock %}
