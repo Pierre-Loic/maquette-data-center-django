@@ -17,6 +17,7 @@
 
 <body class="d-flex flex-column min-vh-100">
 
+{% block header %}
 <!-- HEADER -->
 <header class="py-2" style="background-color: var(--miai-blue, #f00);">
   <div class="container d-flex align-items-center gap-3">
@@ -41,6 +42,7 @@
 
   </div>
 </header>
+{% endblock header %}
 
 <!-- MAIN CONTENT -->
 <main class="flex-grow-1 d-flex">
@@ -49,6 +51,7 @@
     </div>
 </main>
 
+{% block footer %}
 <!-- FOOTER -->
 <footer class="mt-auto py-3" style="background-color: #f8f9fa;">
     <div class="container text-center text-muted small">
@@ -57,6 +60,7 @@
         </span>
     </div>
 </footer>
+{% endblock footer %}
 
 <!-- Bootstrap JS -->
 <script

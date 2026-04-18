@@ -2,6 +2,9 @@
 {% load static %}
 {% block title %}Jeu des températures – Raspberry Pi{% endblock %}
 
+{% block header %}{% endblock header %}
+{% block footer %}{% endblock footer %}
+
 {% block content %}
 <style>
     html, body {
@@ -142,6 +145,81 @@
         font-weight: 600;
         font-variant-numeric: tabular-nums;
     }
+
+    .rpi-live-temp {
+        font-size: 2.4rem;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+        margin: 0.2rem 0 0.4rem 0;
+        transition: color 0.4s ease;
+    }
+    .rpi-live-temp.temp-cool { color: #28a745; }
+    .rpi-live-temp.temp-warm { color: #fd7e14; }
+    .rpi-live-temp.temp-hot  { color: #dc3545; }
+    .rpi-live-temp.temp-unknown { color: #adb5bd; }
+
+    /* ---- Step mode transitions ---- */
+    #colChart, #colForm {
+        transition: width 0.45s ease, max-width 0.45s ease, flex 0.45s ease, padding 0.45s ease;
+        overflow: hidden;
+    }
+
+    /* Étape 1 : formulaire mis en avant */
+    .step-1 #colChart { width: 60% !important; max-width: 60% !important; flex: 0 0 60% !important; }
+    .step-1 #colForm  { width: 40% !important; max-width: 40% !important; flex: 0 0 40% !important; }
+    .step-1 .rpi-blocks-scroll { display: none !important; }
+    .step-1 .chart-wrapper { flex: 1 !important; max-height: none !important; }
+
+    /* Étape 2 : graphique plein écran */
+    .step-2 #colChart { width: 100% !important; max-width: 100% !important; flex: 0 0 100% !important; }
+    .step-2 #colForm  { width: 0 !important; max-width: 0 !important; flex: 0 0 0 !important; padding: 0 !important; }
+    .step-2 .chart-wrapper { flex: 1 !important; max-height: none !important; }
+    .step-2 .rpi-blocks-scroll { display: none !important; }
+
+    /* Étape 3 : réponses et températures max mises en avant */
+    .step-3 #colChart { width: 100% !important; max-width: 100% !important; flex: 0 0 100% !important; }
+    .step-3 #colForm  { width: 0 !important; max-width: 0 !important; flex: 0 0 0 !important; padding: 0 !important; }
+    .step-3 .chart-wrapper { flex: 0 0 22% !important; min-height: 0 !important; }
+    .step-3 .rpi-blocks-scroll { flex: 1 !important; display: flex !important; }
+    .step-3 .rpi-live-temp { font-size: 3rem !important; }
+    .step-3 .rpi-response { max-height: none !important; flex: 1 !important; }
+
+    /* ---- Contrôles d'étape ---- */
+    .step-controls {
+        position: fixed;
+        bottom: 1rem;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 0.4rem;
+        background: rgba(255, 255, 255, 0.96);
+        padding: 0.45rem 0.75rem;
+        border-radius: 2rem;
+        box-shadow: 0 2px 16px rgba(0, 0, 0, 0.18);
+        z-index: 1050;
+    }
+    .step-btn {
+        border: 2px solid #dee2e6;
+        background: white;
+        border-radius: 1.5rem;
+        padding: 0.35rem 1.1rem;
+        font-size: 0.82rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        color: #495057;
+        white-space: nowrap;
+    }
+    .step-btn.active {
+        background: #198754;
+        border-color: #198754;
+        color: white;
+    }
+    .step-btn:hover:not(.active) {
+        border-color: #adb5bd;
+        background: #f8f9fa;
+    }
 </style>
 
 <div class="dashboard">
@@ -149,24 +227,10 @@
         <div class="row h-100 g-3">
 
             <!-- ======================= GRAPHIQUE ======================= -->
-            <div class="col-lg-8 d-flex">
+            <div id="colChart" class="col-lg-9 d-flex">
                 <div class="card card-fullheight shadow-sm w-100">
                     <div class="card-body d-flex flex-column">
-                        <div class="mb-2 d-flex justify-content-between align-items-start flex-wrap gap-2">
-                            <div>
-                                <h2 class="h5 card-title mb-1">Températures en temps réel</h2>
-                                <p class="text-muted mb-0">Actualisation toutes les 2 secondes.</p>
-                            </div>
-                            <div class="d-flex align-items-center gap-2">
-                                <div id="powerDisplay" class="power-display inactive">
-                                    <span>Puissance :</span>
-                                    <span id="powerValue" class="power-value">-- W</span>
-                                </div>
-                                <button id="powerToggle" class="btn btn-outline-warning btn-sm">
-                                    Activer
-                                </button>
-                            </div>
-                        </div>
+                        <h2 class="h5 card-title text-center mb-2">Températures en temps réel</h2>
 
                         <div class="chart-wrapper mb-2">
                             <canvas id="tempChart"></canvas>
@@ -180,17 +244,14 @@
             </div>
 
             <!-- ======================= FORMULAIRE DU JEU ======================= -->
-            <div class="col-lg-4 d-flex">
+            <div id="colForm" class="col-lg-3 d-flex">
                 <div class="card card-fullheight shadow-sm w-100">
                     <div class="card-body card-body-scroll">
-                        <h2 class="h5 card-title mb-3">Votre prédiction</h2>
+                        <div class="text-center mb-3">
+                            <img src="{% static 'dashboard/images/miai.png' %}" alt="Logo MIAI" class="img-fluid" style="max-height: 120px;">
+                        </div>
 
                         <form id="gameForm" novalidate>
-                            <div class="mb-3">
-                                <label for="playerName" class="form-label">Prénom du joueur</label>
-                                <input type="text" id="playerName" class="form-control" required>
-                            </div>
-
                             <div class="mb-3">
                                 <label for="modelSelect" class="form-label">Choix du modèle</label>
                                 <select id="modelSelect" class="form-select" required>
@@ -240,7 +301,7 @@
                             </div>
 
                             <button type="submit" id="submitBtn" class="btn btn-success w-100">
-                                Lancer le jeu
+                                Envoyer la requête
                             </button>
 
                             <div id="countdownTimer" class="mt-3 d-none text-center">
@@ -261,12 +322,29 @@
                             <div id="gameStatus" class="mt-3 text-wrap small"></div>
                             <div id="ollamaResponses" class="mt-2 small text-muted"></div>
                         </form>
+
+                        <div class="mt-3 pt-3 border-top d-flex align-items-center justify-content-between gap-2">
+                            <div id="powerDisplay" class="power-display inactive">
+                                <span>Puissance :</span>
+                                <span id="powerValue" class="power-value">-- W</span>
+                            </div>
+                            <button id="powerToggle" class="btn btn-outline-warning btn-sm">
+                                Activer
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
 
         </div>
     </div>
+</div>
+
+<!-- ======================= SÉLECTEUR D'ÉTAPES ======================= -->
+<div class="step-controls" id="stepControls">
+    <button class="step-btn active" data-step="1">① Formulaire</button>
+    <button class="step-btn" data-step="2">② Températures</button>
+    <button class="step-btn" data-step="3">③ Réponses</button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -303,9 +381,24 @@
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: {
+                        font: { size: 22 },
+                        boxWidth: 24,
+                        padding: 24,
+                    }
+                }
+            },
             scales: {
-                y: { title: { display: true, text: 'Température (°C)' } },
-                x: { title: { display: true, text: 'Temps' } }
+                y: {
+                    title: { display: true, text: 'Température (°C)', font: { size: 22 } },
+                    ticks: { font: { size: 20 } },
+                },
+                x: {
+                    title: { display: true, text: 'Temps', font: { size: 22 } },
+                    ticks: { font: { size: 18 } },
+                }
             }
         }
     };
@@ -320,8 +413,9 @@
         col.className = 'col';
         col.innerHTML = `
             <div class="rpi-block card h-100">
-                <div class="card-body p-2">
-                    <h3 class="h6">${name}</h3>
+                <div class="card-body p-2 d-flex flex-column">
+                    <h3 class="h6 mb-0">${name}</h3>
+                    <div class="rpi-live-temp temp-unknown" data-live-name="${name}">-- °C</div>
                     <p class="rpi-max-temp text-muted">Température max pendant l'inférence : -- °C</p>
                     <p class="rpi-token-count text-muted">Tokens générés (estimation) : --</p>
                     <h4 class="h6">Réponse du modèle</h4>
@@ -387,6 +481,17 @@
                 const temp = json.temperatures[name];
                 dataset.data.push(temp);
                 if (dataset.data.length > 50) dataset.data.shift();
+
+                // Mise à jour du grand indicateur live
+                const liveEl = document.querySelector(`.rpi-live-temp[data-live-name="${name}"]`);
+                if (liveEl) {
+                    liveEl.textContent = temp != null ? `${temp.toFixed(1)} °C` : '-- °C';
+                    liveEl.className = 'rpi-live-temp';
+                    if (temp == null)       liveEl.classList.add('temp-unknown');
+                    else if (temp < 50)     liveEl.classList.add('temp-cool');
+                    else if (temp < 65)     liveEl.classList.add('temp-warm');
+                    else                    liveEl.classList.add('temp-hot');
+                }
             });
 
             tempChart.update();
@@ -601,15 +706,6 @@
     function validateForm() {
         const errors = [];
 
-        // Vérifier le prénom
-        const playerName = document.getElementById('playerName').value.trim();
-        if (!playerName) {
-            errors.push('Veuillez entrer votre prénom');
-            document.getElementById('playerName').classList.add('is-invalid');
-        } else {
-            document.getElementById('playerName').classList.remove('is-invalid');
-        }
-
         // Vérifier le modèle
         const model = document.getElementById('modelSelect').value;
         if (!model) {
@@ -673,8 +769,7 @@
 
         const prompt = document.getElementById('prompt').value;
         const predictions = {};
-        const playerNameInput = document.getElementById('playerName');
-        currentPlayerName = (playerNameInput.value || '').trim() || 'Joueur';
+        currentPlayerName = 'Conférence';
 
         raspberries.forEach((name) => {
             const input = document.querySelector(`input[data-name="${name}"]`);
@@ -719,7 +814,7 @@
                 gameStatusDiv.textContent = 'Impossible de lancer la partie.';
                 // Réactiver le bouton en cas d'erreur
                 submitBtn.disabled = false;
-                submitBtn.textContent = 'Lancer le jeu';
+                submitBtn.textContent = 'Envoyer la requête';
             }
         } catch (err) {
             console.error('Erreur start_game:', err);
@@ -757,7 +852,7 @@
 
                 // Réactiver le bouton une fois la partie terminée
                 submitBtn.disabled = false;
-                submitBtn.textContent = 'Lancer le jeu';
+                submitBtn.textContent = 'Envoyer la requête';
             }
 
         } catch (err) {
@@ -791,5 +886,25 @@
             promptPreview.classList.add('d-none');
         }
     });
+
+    // ----------------------- SÉLECTEUR D'ÉTAPES -----------------------
+    const dashMain = document.querySelector('.dashboard-main');
+    const stepBtns = document.querySelectorAll('.step-btn');
+
+    function setStep(step) {
+        dashMain.classList.remove('step-1', 'step-2', 'step-3');
+        dashMain.classList.add(`step-${step}`);
+        stepBtns.forEach(btn => {
+            btn.classList.toggle('active', parseInt(btn.dataset.step) === step);
+        });
+        // Redimensionner le graphique après la transition CSS
+        setTimeout(() => tempChart.resize(), 480);
+    }
+
+    stepBtns.forEach(btn => {
+        btn.addEventListener('click', () => setStep(parseInt(btn.dataset.step)));
+    });
+
+    setStep(1);
 </script>
 {% endblock %}
