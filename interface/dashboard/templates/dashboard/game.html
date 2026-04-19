@@ -1,12 +1,25 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Jeu des températures – Raspberry Pi{% endblock %}
+{% block title %}Conférence IA{% endblock %}
 
 {% block header %}{% endblock header %}
 {% block footer %}{% endblock footer %}
 
 {% block content %}
 <style>
+    /* ================================================================
+       CHARTE GRAPHIQUE MIAI
+       Bleu  : #3e51a1   Orange : #f34e0b
+    ================================================================ */
+    :root {
+        --miai-blue:          #3e51a1;
+        --miai-blue-light:    #eef0f8;
+        --miai-blue-border:   #b3bce0;
+        --miai-orange:        #f34e0b;
+        --miai-orange-light:  #fdf2ed;
+        --miai-orange-border: #f8a07a;
+    }
+
     html, body {
         height: 100%;
         overflow: hidden;
@@ -14,17 +27,12 @@
 
     body {
         font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #f0f2f8;   /* fond bleu très pâle */
     }
 
     /* Force la page à sortir du conteneur parent et prendre toute la largeur */
-    main.flex-grow-1 {
-        padding: 0 !important;
-    }
-
-    main.flex-grow-1 > div {
-        padding: 0 !important;
-        max-width: 100% !important;
-    }
+    main.flex-grow-1 { padding: 0 !important; }
+    main.flex-grow-1 > div { padding: 0 !important; max-width: 100% !important; }
 
     .dashboard {
         height: 100vh;
@@ -32,15 +40,15 @@
         flex-direction: column;
     }
 
-    .dashboard-main {
-        flex: 1 1 auto;
-    }
+    .dashboard-main { flex: 1 1 auto; }
 
+    /* ---- Cards ---- */
     .card-fullheight {
         height: 100%;
         display: flex;
         flex-direction: column;
         overflow: hidden;
+        border-top: 3px solid var(--miai-blue) !important;
     }
 
     .card-fullheight .card-body-scroll {
@@ -48,13 +56,23 @@
         overflow: auto;
     }
 
-    .rpi-blocks-container {
-        margin-top: 0.5rem;
+    /* Titre principal du graphique */
+    h2.card-title {
+        color: var(--miai-blue);
+        font-weight: 700;
+        letter-spacing: 0.01em;
     }
 
+    /* Titres des blocs réponse */
     .rpi-block h3 {
+        color: var(--miai-blue);
         margin-bottom: 0.25rem;
+        border-bottom: 2px solid var(--miai-blue-border);
+        padding-bottom: 0.2rem;
     }
+
+    /* ---- Blocs réponse ---- */
+    .rpi-blocks-container { margin-top: 0.5rem; }
 
     .rpi-max-temp {
         font-size: 0.9rem;
@@ -70,17 +88,47 @@
         margin-bottom: 0.5rem;
     }
 
+    .rpi-block.card {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        border-top: 3px solid var(--miai-orange) !important;
+    }
 
+    .rpi-block .card-body { display: flex; flex-direction: column; }
+
+    .rpi-response {
+        background: var(--miai-blue-light);
+        padding: 0.5rem;
+        border-radius: 0.5rem;
+        margin-bottom: 0;
+        flex: 1 1 auto;
+        max-height: 300px;
+        overflow-y: auto;
+        border-left: 3px solid var(--miai-blue-border);
+    }
+
+    .rpi-response pre {
+        background: #dde1f0;
+        padding: 0.5rem;
+        border-radius: 0.25rem;
+        overflow-x: auto;
+    }
+
+    .rpi-response code {
+        background: #dde1f0;
+        padding: 0.1rem 0.3rem;
+        border-radius: 0.2rem;
+    }
+
+    /* ---- Graphique ---- */
     .chart-wrapper {
         flex: 0 0 50%;
         min-height: 200px;
         max-height: 600px;
     }
 
-    #tempChart {
-        width: 100% !important;
-        height: 100% !important;
-    }
+    #tempChart { width: 100% !important; height: 100% !important; }
 
     .rpi-blocks-scroll {
         flex: 1 1 auto;
@@ -88,49 +136,19 @@
         overflow: auto;
     }
 
+    /* ---- Compte à rebours ---- */
     #countdownValue {
         font-variant-numeric: tabular-nums;
+        color: var(--miai-blue);
     }
 
-    .rpi-block.card {
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-    }
-
-    .rpi-block .card-body {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .rpi-response {
-        background: #f8f9fa;
-        padding: 0.5rem;
-        border-radius: 0.5rem;
-        margin-bottom: 0;
-        flex: 1 1 auto;
-        max-height: 300px;
-        overflow-y: auto;
-    }
-
-    .rpi-response pre {
-        background: #e9ecef;
-        padding: 0.5rem;
-        border-radius: 0.25rem;
-        overflow-x: auto;
-    }
-
-    .rpi-response code {
-        background: #e9ecef;
-        padding: 0.1rem 0.3rem;
-        border-radius: 0.2rem;
-    }
-
+    /* ---- Puissance ---- */
     .power-display {
         display: inline-flex;
         align-items: center;
         gap: 0.5rem;
-        background: #fff3cd;
+        background: var(--miai-orange-light);
+        border: 1px solid var(--miai-orange-border);
         padding: 0.25rem 0.75rem;
         border-radius: 0.5rem;
         font-size: 0.9rem;
@@ -138,14 +156,19 @@
 
     .power-display.inactive {
         background: #e9ecef;
+        border-color: #dee2e6;
         color: #6c757d;
     }
 
     .power-value {
-        font-weight: 600;
+        font-weight: 700;
         font-variant-numeric: tabular-nums;
+        color: var(--miai-orange);
     }
 
+    .power-display.inactive .power-value { color: #6c757d; }
+
+    /* ---- Températures live ---- */
     .rpi-live-temp {
         font-size: 2.4rem;
         font-weight: 700;
@@ -154,10 +177,103 @@
         margin: 0.2rem 0 0.4rem 0;
         transition: color 0.4s ease;
     }
-    .rpi-live-temp.temp-cool { color: #28a745; }
-    .rpi-live-temp.temp-warm { color: #fd7e14; }
-    .rpi-live-temp.temp-hot  { color: #dc3545; }
-    .rpi-live-temp.temp-unknown { color: #adb5bd; }
+
+    /* Couleurs sémantiques CPU temp — conservées neutres pour lisibilité */
+    .temp-cool    { color: #1e8c45; }
+    .temp-warm    { color: #d9680a; }
+    .temp-hot     { color: #c0392b; }
+    .temp-unknown { color: #adb5bd; }
+
+    .live-temp-inline {
+        font-size: 1rem;
+        transition: color 0.4s ease;
+    }
+
+    /* ---- Encadré RAG ---- */
+    #ragToggle.rag-off {
+        border-color: #6c757d;
+        color: #6c757d;
+    }
+    #ragToggle.rag-on {
+        border-color: var(--miai-blue);
+        color: #fff;
+        background: var(--miai-blue);
+    }
+
+    /* Preview prompt */
+    #promptPreview {
+        background: var(--miai-blue-light) !important;
+        border-color: var(--miai-blue-border) !important;
+    }
+
+    /* ---- Encadré énergie (jaune → orange MIAI) ---- */
+    #gameForm .border-warning {
+        border-color: var(--miai-orange) !important;
+    }
+    #gameForm [style*="fffbf0"] {
+        background: var(--miai-orange-light) !important;
+    }
+    #gameForm .btn-outline-warning {
+        --bs-btn-color:            var(--miai-orange);
+        --bs-btn-border-color:     var(--miai-orange);
+        --bs-btn-hover-bg:         var(--miai-orange);
+        --bs-btn-hover-color:      #fff;
+        --bs-btn-hover-border-color: var(--miai-orange);
+        --bs-btn-active-bg:        var(--miai-orange);
+        --bs-btn-active-color:     #fff;
+        --bs-btn-active-border-color: var(--miai-orange);
+    }
+
+    /* Bouton principal */
+    #submitBtn {
+        background-color: var(--miai-orange) !important;
+        border-color: var(--miai-orange) !important;
+        color: #fff !important;
+        font-weight: 700;
+    }
+    #submitBtn:hover:not(:disabled) {
+        background-color: #d94209 !important;
+        border-color: #d94209 !important;
+    }
+    #submitBtn:disabled {
+        background-color: #f8a07a !important;
+        border-color: #f8a07a !important;
+    }
+
+    /* Bouton puissance */
+    #powerToggle {
+        border-color: var(--miai-orange) !important;
+        color: var(--miai-orange) !important;
+    }
+    #powerToggle:hover {
+        background: var(--miai-orange) !important;
+        color: #fff !important;
+    }
+
+    /* ---- Tailles de police colonne droite (visible en amphi) ---- */
+    #colForm .form-label                { font-size: 1.05rem; }
+    #colForm .form-select               { font-size: 1.05rem; }
+    #colForm .form-control              { font-size: 1.05rem; }
+    #colForm .fw-semibold.small,
+    #colForm .small                     { font-size: 0.95rem !important; }
+    #colForm .btn                       { font-size: 1rem; }
+    #colForm .btn-group .btn            { font-size: 0.95rem; }
+    #colForm #promptPreviewText         { font-size: 0.95rem; }
+    #colForm #promptPreview small       { font-size: 0.9rem; }
+    #colForm .live-temp-inline          { font-size: 1.15rem; }
+    #colForm .power-value               { font-size: 1.3rem; }
+    #colForm #ragHint                   { font-size: 0.9rem; }
+    #colForm #countdownValue            { font-size: 2.5rem; }
+    #colForm .text-muted.small          { font-size: 0.9rem !important; }
+
+    /* ---- Légende couleurs ---- */
+    .temp-legend-dot {
+        display: inline-block;
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        vertical-align: middle;
+    }
 
     /* ---- Step mode transitions ---- */
     #colChart, #colForm {
@@ -171,19 +287,44 @@
     .step-1 .rpi-blocks-scroll { display: none !important; }
     .step-1 .chart-wrapper { flex: 1 !important; max-height: none !important; }
 
-    /* Étape 2 : graphique plein écran */
-    .step-2 #colChart { width: 100% !important; max-width: 100% !important; flex: 0 0 100% !important; }
-    .step-2 #colForm  { width: 0 !important; max-width: 0 !important; flex: 0 0 0 !important; padding: 0 !important; }
-    .step-2 .chart-wrapper { flex: 1 !important; max-height: none !important; }
-    .step-2 .rpi-blocks-scroll { display: none !important; }
+    /* Étape 2 : bandeau 3 colonnes + réponses */
+    .step-2 #colChart  { width: 100% !important; max-width: 100% !important; flex: 0 0 100% !important; }
+    .step-2 #colForm   { width: 0 !important; max-width: 0 !important; flex: 0 0 0 !important; padding: 0 !important; }
+    .step-2 #topRow    { height: 32vh; flex-shrink: 0; }
+    .step-2 #chartCol  { flex: 0 0 34% !important; min-width: 0; }
+    .step-2 #tempsCol  { display: flex !important; flex: 0 0 33% !important; }
+    .step-2 #summaryCol{ display: flex !important; flex: 0 0 33% !important; }
+    .step-2 .rpi-blocks-scroll { flex: 1 !important; display: flex !important; }
+    .step-2 .rpi-response { max-height: none !important; flex: 1 !important; }
 
-    /* Étape 3 : réponses et températures max mises en avant */
-    .step-3 #colChart { width: 100% !important; max-width: 100% !important; flex: 0 0 100% !important; }
-    .step-3 #colForm  { width: 0 !important; max-width: 0 !important; flex: 0 0 0 !important; padding: 0 !important; }
-    .step-3 .chart-wrapper { flex: 0 0 22% !important; min-height: 0 !important; }
-    .step-3 .rpi-blocks-scroll { flex: 1 !important; display: flex !important; }
-    .step-3 .rpi-live-temp { font-size: 3rem !important; }
-    .step-3 .rpi-response { max-height: none !important; flex: 1 !important; }
+    /* ---- Panneaux bandeau step-2 ---- */
+    #tempsCol, #summaryCol {
+        display: none;
+        flex-direction: column;
+        gap: 0.4rem;
+        padding: 0.6rem;
+        background: var(--miai-blue-light);
+        border: 1px solid var(--miai-blue-border);
+        border-top: 3px solid var(--miai-blue);
+        border-radius: 0.5rem;
+        overflow-y: auto;
+        font-size: 1rem;
+    }
+
+    .banner-label {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--miai-blue);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.1rem;
+    }
+
+    .live-temp-banner {
+        font-size: 1.4rem;
+        font-weight: 700;
+        transition: color 0.4s ease;
+    }
 
     /* ---- Contrôles d'étape ---- */
     .step-controls {
@@ -193,14 +334,16 @@
         transform: translateX(-50%);
         display: flex;
         gap: 0.4rem;
-        background: rgba(255, 255, 255, 0.96);
+        background: rgba(255, 255, 255, 0.97);
+        border: 1px solid var(--miai-blue-border);
         padding: 0.45rem 0.75rem;
         border-radius: 2rem;
-        box-shadow: 0 2px 16px rgba(0, 0, 0, 0.18);
+        box-shadow: 0 2px 16px rgba(62, 81, 161, 0.18);
         z-index: 1050;
     }
+
     .step-btn {
-        border: 2px solid #dee2e6;
+        border: 2px solid var(--miai-blue-border);
         background: white;
         border-radius: 1.5rem;
         padding: 0.35rem 1.1rem;
@@ -208,17 +351,19 @@
         font-weight: 600;
         cursor: pointer;
         transition: all 0.2s;
-        color: #495057;
+        color: var(--miai-blue);
         white-space: nowrap;
     }
+
     .step-btn.active {
-        background: #198754;
-        border-color: #198754;
+        background: var(--miai-blue);
+        border-color: var(--miai-blue);
         color: white;
     }
+
     .step-btn:hover:not(.active) {
-        border-color: #adb5bd;
-        background: #f8f9fa;
+        border-color: var(--miai-blue);
+        background: var(--miai-blue-light);
     }
 </style>
 
@@ -232,8 +377,53 @@
                     <div class="card-body d-flex flex-column">
                         <h2 class="h5 card-title text-center mb-2">Températures en temps réel</h2>
 
-                        <div class="chart-wrapper mb-2">
-                            <canvas id="tempChart"></canvas>
+                        <!-- Bandeau supérieur : graphique + panneaux step-2 -->
+                        <div id="topRow" class="d-flex gap-2 mb-2 flex-shrink-0" style="min-height:200px;">
+
+                            <!-- Colonne gauche : graphique (toujours visible) -->
+                            <div id="chartCol" class="flex-grow-1 d-flex flex-column">
+                                <div class="chart-wrapper flex-grow-1" style="flex:1;min-height:0;">
+                                    <canvas id="tempChart"></canvas>
+                                </div>
+                            </div>
+
+                            <!-- Colonne milieu : températures CPU + puissance (step-2 seulement) -->
+                            <div id="tempsCol">
+                                <div class="banner-label">🌡️ Températures CPU</div>
+                                {% for name in raspberries %}
+                                <div class="d-flex align-items-center justify-content-between px-2 py-1 rounded border bg-white">
+                                    <span class="small text-truncate me-2" style="max-width:60%;">{{ name }}</span>
+                                    <span class="live-temp-banner temp-unknown" data-banner-name="{{ name }}">-- °C</span>
+                                </div>
+                                {% endfor %}
+                                <hr class="my-1">
+                                <div class="banner-label">⚡ Puissance totale</div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span id="bannerPowerValue" class="fw-bold" style="font-size:1.6rem;">-- W</span>
+                                    <span class="text-muted small">(3 Raspberry Pi)</span>
+                                </div>
+                            </div>
+
+                            <!-- Colonne droite : résumé des paramètres envoyés (step-2 seulement) -->
+                            <div id="summaryCol">
+                                <div class="banner-label">📋 Paramètres envoyés</div>
+                                <div>
+                                    <div class="text-muted" style="font-size:0.8rem;">Modèle</div>
+                                    <div id="summaryModel" class="fw-semibold">--</div>
+                                </div>
+                                <div>
+                                    <div class="text-muted" style="font-size:0.8rem;">Longueur de réponse</div>
+                                    <div id="summaryLength" class="fw-semibold">--</div>
+                                </div>
+                                <div>
+                                    <div class="text-muted" style="font-size:0.8rem;">RAG</div>
+                                    <div id="summaryRag" class="fw-semibold">--</div>
+                                </div>
+                                <hr class="my-1">
+                                <div class="text-muted" style="font-size:0.8rem;">Prompt envoyé</div>
+                                <div id="summaryPrompt" class="fst-italic" style="font-size:0.9rem; overflow-y:auto;"></div>
+                            </div>
+
                         </div>
 
                         <div id="rpiBlocksContainer"
@@ -252,50 +442,59 @@
                         </div>
 
                         <form id="gameForm" novalidate>
-                            <div class="mb-3">
-                                <label for="modelSelect" class="form-label">Choix du modèle</label>
-                                <select id="modelSelect" class="form-select" required>
-                                    <option value="gemma3:270m" data-size="petit">🇺🇸 Gemma3:270m (Petit modèle)</option>
-                                    <option value="qwen3:0.6b" data-size="petit">🇨🇳 Qwen3:0.6b (Petit modèle)</option>
-                                    <option value="falcon3:1b" data-size="moyen">🇦🇪 Falcon3:1b (Moyen modèle)</option>
-                                    <option value="llama3.2:1b" data-size="moyen">🇺🇸 Llama3.2:1b (Moyen modèle)</option>
-                                    <option value="deepseek-r1:1.5b" data-size="grand">🇨🇳 DeepSeek R1:1.5b (Grand modèle)</option>
-                                    <option value="ministral-3:3b" data-size="grand">🇫🇷 Ministral-3:3b (Grand modèle)</option>
-                                </select>
-                            </div>
 
-                            <div class="mb-3">
-                                <label class="form-label">Températures maximales prévues (°C)</label>
-                                <div class="row g-2">
-                                    {% for name in raspberries %}
-                                        <div class="col-12">
-                                            <label for="pred-{{ forloop.counter }}" class="form-label">
-                                                {{ name }}
-                                            </label>
-                                            <input type="number"
-                                                   step="0.1"
-                                                   id="pred-{{ name }}"
-                                                   class="form-control"
-                                                   data-name="{{ name }}"
-                                                   required>
-                                        </div>
-                                    {% endfor %}
+                            <!-- Paramètres clés : impact énergétique -->
+                            <div class="p-2 mb-3 rounded border border-warning" style="background:#fffbf0;">
+                                <div class="d-flex align-items-center gap-1 mb-2">
+                                    <span class="fw-semibold small">⚡ Paramètres à fort impact énergétique</span>
+                                </div>
+
+                                <div class="mb-2">
+                                    <label for="modelSelect" class="form-label mb-1 small">Taille du modèle</label>
+                                    <select id="modelSelect" class="form-select form-select-sm" required>
+                                        <option value="gemma3:270m" data-size="petit">🇺🇸 Gemma3:270m (Petit)</option>
+                                        <option value="qwen3:0.6b" data-size="petit">🇨🇳 Qwen3:0.6b (Petit)</option>
+                                        <option value="falcon3:1b" data-size="moyen">🇦🇪 Falcon3:1b (Moyen)</option>
+                                        <option value="llama3.2:1b" data-size="moyen">🇺🇸 Llama3.2:1b (Moyen)</option>
+                                        <option value="deepseek-r1:1.5b" data-size="grand">🇨🇳 DeepSeek R1:1.5b (Grand)</option>
+                                        <option value="ministral-3:3b" data-size="grand">🇫🇷 Ministral-3:3b (Grand)</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-0">
+                                    <label class="form-label mb-1 small">Longueur de la réponse attendue</label>
+                                    <div class="btn-group w-100" role="group" aria-label="Longueur de la réponse">
+                                        <input type="radio" class="btn-check" name="responseLength" id="rl-short" value="Réponds en 1 à 2 phrases maximum." autocomplete="off">
+                                        <label class="btn btn-outline-warning btn-sm" for="rl-short">Courte</label>
+                                        <input type="radio" class="btn-check" name="responseLength" id="rl-medium" value="Réponds en un paragraphe d'environ 5 phrases." autocomplete="off" checked>
+                                        <label class="btn btn-outline-warning btn-sm" for="rl-medium">Moyenne</label>
+                                        <input type="radio" class="btn-check" name="responseLength" id="rl-long" value="Réponds en détail en au moins 3 paragraphes." autocomplete="off">
+                                        <label class="btn btn-outline-warning btn-sm" for="rl-long">Longue</label>
+                                    </div>
                                 </div>
                             </div>
 
                             <div class="mb-3">
-                                <label for="prompt" class="form-label">Prompt envoyé au modèle</label>
-                                <select id="prompt" class="form-select" required>
-                                    <option value="">-- Choisissez un prompt --</option>
-                                    <option value="Quel mot définit le mieux Grenoble ?">📝 Grenoble en un mot</option>
-                                    <option value="De quand date le téléphérique de la Bastille ?">⚡ Téléphérique Bastille</option>
-                                    <option value="Écris un poème sur une IA qui essaie de skier à l'Alpe d'Huez mais qui tombe tout le temps.">❄️ Poème IA ski</option>
-                                    <option value="Raconte l'histoire d'un robot qui se perd dans les ruelles du vieux Grenoble et qui demande son chemin à ChatGPT.">🤖 Robot perdu Grenoble</option>
+                                <label for="promptBase" class="form-label">Sujet de la question (prompt)</label>
+                                <select id="promptBase" class="form-select" required>
+                                    <option value="">-- Choisissez un sujet --</option>
+                                    <option value="Qu'est-ce que la CSG ?">💰 La CSG</option>
+                                    <option value="Comment fonctionne le prélèvement à la source en France ?">📊 Le prélèvement à la source</option>
+                                    <option value="Quelles sont les principales différences entre impôt sur le revenu et impôt sur les sociétés, et comment sont-ils calculés ?">🏢 IR vs IS</option>
+                                    <option value="Explique les différences entre la fraude fiscale, l'évasion fiscale et l'optimisation fiscale, avec des exemples concrets pour chaque notion.">🔍 Fraude vs évasion vs optimisation fiscale</option>
+                                    <option value="Décris les principales étapes d'un contrôle fiscal d'une PME en France, de son déclenchement jusqu'à sa conclusion, en précisant les droits et obligations du contribuable à chaque étape.">📋 Contrôle fiscal d'une PME</option>
                                 </select>
 
-                                <!-- Affichage du prompt sélectionné -->
+                                <!-- Toggle RAG -->
+                                <div class="mt-2 d-flex align-items-center gap-2">
+                                    <button type="button" id="ragToggle" class="btn btn-outline-secondary btn-sm rag-off">
+                                        Sans RAG
+                                    </button>
+                                    <span class="text-muted small" id="ragHint">Le modèle répond sans contexte supplémentaire.</span>
+                                </div>
+
                                 <div id="promptPreview" class="mt-2 p-2 bg-light border rounded d-none">
-                                    <small class="text-muted d-block mb-1">Prompt qui sera envoyé :</small>
+                                    <small class="text-muted d-block mb-1">Prompt complet envoyé au modèle :</small>
                                     <div id="promptPreviewText" class="small fst-italic"></div>
                                 </div>
                             </div>
@@ -323,14 +522,41 @@
                             <div id="ollamaResponses" class="mt-2 small text-muted"></div>
                         </form>
 
-                        <div class="mt-3 pt-3 border-top d-flex align-items-center justify-content-between gap-2">
-                            <div id="powerDisplay" class="power-display inactive">
-                                <span>Puissance :</span>
-                                <span id="powerValue" class="power-value">-- W</span>
+                        <div class="mt-3 pt-3 border-top">
+
+                            <!-- Températures CPU en direct -->
+                            <div class="mb-3">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <span class="small fw-semibold text-muted">🌡️ Températures CPU en direct</span>
+                                    <span class="badge rounded-pill text-bg-light border small">
+                                        <span class="temp-legend-dot" style="background:#28a745;"></span> &lt;50°C &nbsp;
+                                        <span class="temp-legend-dot" style="background:#fd7e14;"></span> 50–65°C &nbsp;
+                                        <span class="temp-legend-dot" style="background:#dc3545;"></span> &gt;65°C
+                                    </span>
+                                </div>
+                                <div class="d-flex flex-column gap-2">
+                                    {% for name in raspberries %}
+                                    <div class="d-flex align-items-center justify-content-between px-2 py-1 rounded border" style="background:#f8f9fa;">
+                                        <span class="small text-truncate me-2" style="max-width:65%;">{{ name }}</span>
+                                        <span class="fw-bold live-temp-inline temp-unknown" data-inline-name="{{ name }}">-- °C</span>
+                                    </div>
+                                    {% endfor %}
+                                </div>
                             </div>
-                            <button id="powerToggle" class="btn btn-outline-warning btn-sm">
-                                Activer
-                            </button>
+
+                            <!-- Puissance électrique globale -->
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div>
+                                    <span class="small fw-semibold text-muted">⚡ Puissance électrique totale</span><br>
+                                    <div id="powerDisplay" class="power-display inactive">
+                                        <span id="powerValue" class="power-value">-- W</span>
+                                        <span class="text-muted small ms-1">(3 Raspberry Pi)</span>
+                                    </div>
+                                </div>
+                                <button id="powerToggle" class="btn btn-outline-warning btn-sm">
+                                    Activer
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -343,8 +569,7 @@
 <!-- ======================= SÉLECTEUR D'ÉTAPES ======================= -->
 <div class="step-controls" id="stepControls">
     <button class="step-btn active" data-step="1">① Formulaire</button>
-    <button class="step-btn" data-step="2">② Températures</button>
-    <button class="step-btn" data-step="3">③ Réponses</button>
+    <button class="step-btn" data-step="2">② Réponses</button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -415,7 +640,6 @@
             <div class="rpi-block card h-100">
                 <div class="card-body p-2 d-flex flex-column">
                     <h3 class="h6 mb-0">${name}</h3>
-                    <div class="rpi-live-temp temp-unknown" data-live-name="${name}">-- °C</div>
                     <p class="rpi-max-temp text-muted">Température max pendant l'inférence : -- °C</p>
                     <p class="rpi-token-count text-muted">Tokens générés (estimation) : --</p>
                     <h4 class="h6">Réponse du modèle</h4>
@@ -482,7 +706,7 @@
                 dataset.data.push(temp);
                 if (dataset.data.length > 50) dataset.data.shift();
 
-                // Mise à jour du grand indicateur live
+                // Mise à jour du grand indicateur live (étape 3)
                 const liveEl = document.querySelector(`.rpi-live-temp[data-live-name="${name}"]`);
                 if (liveEl) {
                     liveEl.textContent = temp != null ? `${temp.toFixed(1)} °C` : '-- °C';
@@ -491,6 +715,28 @@
                     else if (temp < 50)     liveEl.classList.add('temp-cool');
                     else if (temp < 65)     liveEl.classList.add('temp-warm');
                     else                    liveEl.classList.add('temp-hot');
+                }
+
+                // Mise à jour du badge inline (panneau de droite, step-1)
+                const inlineEl = document.querySelector(`.live-temp-inline[data-inline-name="${name}"]`);
+                if (inlineEl) {
+                    inlineEl.textContent = temp != null ? `${temp.toFixed(1)} °C` : '-- °C';
+                    inlineEl.className = 'fw-bold live-temp-inline';
+                    if (temp == null)       inlineEl.classList.add('temp-unknown');
+                    else if (temp < 50)     inlineEl.classList.add('temp-cool');
+                    else if (temp < 65)     inlineEl.classList.add('temp-warm');
+                    else                    inlineEl.classList.add('temp-hot');
+                }
+
+                // Mise à jour de la bannière (bandeau supérieur step-2)
+                const bannerEl = document.querySelector(`.live-temp-banner[data-banner-name="${name}"]`);
+                if (bannerEl) {
+                    bannerEl.textContent = temp != null ? `${temp.toFixed(1)} °C` : '-- °C';
+                    bannerEl.className = 'live-temp-banner';
+                    if (temp == null)       bannerEl.classList.add('temp-unknown');
+                    else if (temp < 50)     bannerEl.classList.add('temp-cool');
+                    else if (temp < 65)     bannerEl.classList.add('temp-warm');
+                    else                    bannerEl.classList.add('temp-hot');
                 }
             });
 
@@ -516,13 +762,17 @@
             const response = await fetch('{% url "api_power" %}');
             const json = await response.json();
             if (json.status === 'success' && json.power != null) {
-                powerValue.textContent = `${json.power} W`;
+                const txt = `${json.power} W`;
+                powerValue.textContent = txt;
+                document.getElementById('bannerPowerValue').textContent = txt;
             } else {
                 powerValue.textContent = 'Erreur';
+                document.getElementById('bannerPowerValue').textContent = 'Erreur';
             }
         } catch (err) {
             console.error('Erreur en récupérant la puissance:', err);
             powerValue.textContent = 'Erreur';
+            document.getElementById('bannerPowerValue').textContent = 'Erreur';
         }
     }
 
@@ -541,6 +791,7 @@
             powerToggle.classList.remove('btn-warning');
             powerToggle.classList.add('btn-outline-warning');
             powerValue.textContent = '-- W';
+            document.getElementById('bannerPowerValue').textContent = '-- W';
             if (powerInterval) {
                 clearInterval(powerInterval);
                 powerInterval = null;
@@ -715,31 +966,13 @@
             document.getElementById('modelSelect').classList.remove('is-invalid');
         }
 
-        // Vérifier les températures prédites
-        let allTempsValid = true;
-        raspberries.forEach((name) => {
-            const input = document.querySelector(`input[data-name="${name}"]`);
-            if (input) {
-                const value = input.value.trim();
-                if (!value || isNaN(parseFloat(value))) {
-                    allTempsValid = false;
-                    input.classList.add('is-invalid');
-                } else {
-                    input.classList.remove('is-invalid');
-                }
-            }
-        });
-        if (!allTempsValid) {
-            errors.push('Veuillez entrer toutes les températures prédites');
-        }
-
         // Vérifier le prompt
-        const prompt = document.getElementById('prompt').value;
-        if (!prompt) {
-            errors.push('Veuillez choisir un prompt');
-            document.getElementById('prompt').classList.add('is-invalid');
+        const promptBase = document.getElementById('promptBase');
+        if (!promptBase.value) {
+            errors.push('Veuillez choisir un sujet de question');
+            promptBase.classList.add('is-invalid');
         } else {
-            document.getElementById('prompt').classList.remove('is-invalid');
+            promptBase.classList.remove('is-invalid');
         }
 
         return errors;
@@ -766,17 +999,11 @@
         submitBtn.disabled = true;
         submitBtn.textContent = 'Calcul en cours...';
         gameStatusDiv.innerHTML = '';
+        populateSummary();
 
-        const prompt = document.getElementById('prompt').value;
+        const prompt = buildFullPrompt();
         const predictions = {};
         currentPlayerName = 'Conférence';
-
-        raspberries.forEach((name) => {
-            const input = document.querySelector(`input[data-name="${name}"]`);
-            if (input) {
-                predictions[name] = input.value;
-            }
-        });
 
         try {
             const csrftoken = getCookie('csrftoken');
@@ -872,19 +1099,74 @@
         selectedModel = modelSelect.value;
     });
 
-    // Affichage du prompt sélectionné
-    const promptSelect = document.getElementById('prompt');
+    // Contextes RAG chargés depuis le serveur
+    const RAG_CONTEXTS = {{ rag_contexts|safe }};
+
+    // État du toggle RAG
+    let ragEnabled = false;
+    const ragToggle = document.getElementById('ragToggle');
+    const ragHint   = document.getElementById('ragHint');
+
+    ragToggle.addEventListener('click', () => {
+        ragEnabled = !ragEnabled;
+        ragToggle.textContent = ragEnabled ? 'Avec RAG' : 'Sans RAG';
+        ragToggle.classList.toggle('rag-on', ragEnabled);
+        ragToggle.classList.toggle('rag-off', !ragEnabled);
+        ragHint.textContent = ragEnabled
+            ? 'Un contexte documentaire est injecté dans le prompt.'
+            : 'Le modèle répond sans contexte supplémentaire.';
+        updatePromptPreview();
+    });
+
+    // Construction du prompt complet (contexte RAG + base + suffixe longueur)
+    function buildFullPrompt() {
+        const base = document.getElementById('promptBase').value;
+        const rlChecked = document.querySelector('input[name="responseLength"]:checked');
+        const suffix = rlChecked ? rlChecked.value : '';
+        if (!base) return '';
+        let prompt = base;
+        if (ragEnabled && RAG_CONTEXTS[base]) {
+            prompt = RAG_CONTEXTS[base] + '\n\nQuestion : ' + base;
+        }
+        return `${prompt} ${suffix}`;
+    }
+
+    // Affichage du prompt complet
     const promptPreview = document.getElementById('promptPreview');
     const promptPreviewText = document.getElementById('promptPreviewText');
 
-    promptSelect.addEventListener('change', function() {
-        const selectedValue = this.value;
-        if (selectedValue) {
-            promptPreviewText.textContent = selectedValue;
-            promptPreview.classList.remove('d-none');
-        } else {
-            promptPreview.classList.add('d-none');
+    const CONTEXT_MAX_CHARS = 120;
+
+    function updatePromptPreview() {
+        const base = document.getElementById('promptBase').value;
+        const rlChecked = document.querySelector('input[name="responseLength"]:checked');
+        const suffix = rlChecked ? rlChecked.value : '';
+        if (!base) { promptPreview.classList.add('d-none'); return; }
+
+        promptPreviewText.innerHTML = '';
+
+        if (ragEnabled && RAG_CONTEXTS[base]) {
+            const ctx = RAG_CONTEXTS[base];
+            const truncatedCtx = ctx.length > CONTEXT_MAX_CHARS
+                ? ctx.slice(0, CONTEXT_MAX_CHARS) + '…'
+                : ctx;
+            const ctxSpan = document.createElement('span');
+            ctxSpan.className = 'text-muted';
+            ctxSpan.textContent = truncatedCtx + '\n\nQuestion : ';
+            promptPreviewText.appendChild(ctxSpan);
         }
+
+        const questionSpan = document.createElement('span');
+        questionSpan.className = 'fw-semibold text-dark';
+        questionSpan.textContent = base + ' ' + suffix;
+        promptPreviewText.appendChild(questionSpan);
+
+        promptPreview.classList.remove('d-none');
+    }
+
+    document.getElementById('promptBase').addEventListener('change', updatePromptPreview);
+    document.querySelectorAll('input[name="responseLength"]').forEach(el => {
+        el.addEventListener('change', updatePromptPreview);
     });
 
     // ----------------------- SÉLECTEUR D'ÉTAPES -----------------------
@@ -892,18 +1174,49 @@
     const stepBtns = document.querySelectorAll('.step-btn');
 
     function setStep(step) {
-        dashMain.classList.remove('step-1', 'step-2', 'step-3');
+        dashMain.classList.remove('step-1', 'step-2');
         dashMain.classList.add(`step-${step}`);
         stepBtns.forEach(btn => {
             btn.classList.toggle('active', parseInt(btn.dataset.step) === step);
         });
-        // Redimensionner le graphique après la transition CSS
         setTimeout(() => tempChart.resize(), 480);
     }
 
     stepBtns.forEach(btn => {
         btn.addEventListener('click', () => setStep(parseInt(btn.dataset.step)));
     });
+
+    // Populate le panneau résumé (step-2) au lancement de la requête
+    function populateSummary() {
+        const modelVal = document.getElementById('modelSelect').value;
+        const rlChecked = document.querySelector('input[name="responseLength"]:checked');
+        const lengthLabel = rlChecked
+            ? rlChecked.closest('.btn-group').querySelector(`label[for="${rlChecked.id}"]`).textContent
+            : '--';
+        const ragLabel = ragEnabled ? 'Avec RAG' : 'Sans RAG';
+
+        document.getElementById('summaryModel').textContent = modelVal || '--';
+        document.getElementById('summaryLength').textContent = lengthLabel;
+        document.getElementById('summaryRag').textContent = ragLabel;
+
+        // Prompt : question en gras + contexte RAG tronqué
+        const base = document.getElementById('promptBase').value;
+        const rlSuffix = rlChecked ? rlChecked.value : '';
+        const summaryEl = document.getElementById('summaryPrompt');
+        summaryEl.innerHTML = '';
+        if (ragEnabled && RAG_CONTEXTS[base]) {
+            const ctx = RAG_CONTEXTS[base];
+            const ctxSpan = document.createElement('span');
+            ctxSpan.className = 'text-muted';
+            ctxSpan.textContent = (ctx.length > 120 ? ctx.slice(0, 120) + '…' : ctx) + '\n\nQuestion : ';
+            ctxSpan.style.whiteSpace = 'pre-wrap';
+            summaryEl.appendChild(ctxSpan);
+        }
+        const qSpan = document.createElement('span');
+        qSpan.className = 'fw-semibold text-dark';
+        qSpan.textContent = base + (rlSuffix ? ' ' + rlSuffix : '');
+        summaryEl.appendChild(qSpan);
+    }
 
     setStep(1);
 </script>

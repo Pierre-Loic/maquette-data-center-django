@@ -8,6 +8,16 @@ import requests
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
+import os
+
+RAG_CONTEXTS_PATH = os.path.join(os.path.dirname(__file__), "rag_contexts.json")
+
+def _load_rag_contexts():
+    try:
+        with open(RAG_CONTEXTS_PATH, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
 
 # Configuration des Raspberry Pi
 RASPBERRIES = [
@@ -97,6 +107,7 @@ class GameView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['raspberries'] = [r["name"] for r in RASPBERRIES]
+        context['rag_contexts'] = json.dumps(_load_rag_contexts(), ensure_ascii=False)
         return context
 
 
