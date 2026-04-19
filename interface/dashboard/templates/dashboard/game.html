@@ -518,8 +518,6 @@
                                 </div>
                             </div>
 
-                            <div id="gameStatus" class="mt-3 text-wrap small"></div>
-                            <div id="ollamaResponses" class="mt-2 small text-muted"></div>
                         </form>
 
                         <div class="mt-3 pt-3 border-top">
@@ -803,8 +801,8 @@
 
     // ----------------------- JEU + COMPTE À REBOURS + CLASSEMENT -----------------------
     const gameForm = document.getElementById('gameForm');
-    const gameStatusDiv = document.getElementById('gameStatus');
-    const ollamaResponsesDiv = document.getElementById('ollamaResponses');
+    const gameStatusDiv = { innerHTML: '', textContent: '' };
+    const ollamaResponsesDiv = { textContent: '' };
 
     const countdownTimerDiv = document.getElementById('countdownTimer');
     const countdownValueSpan = document.getElementById('countdownValue');
@@ -910,47 +908,6 @@
         return cookieValue;
     }
 
-    function renderResultsAndLeaderboard(json) {
-        let errorsHtml = '';
-        if (json.errors && typeof json.errors === 'object') {
-            errorsHtml += '<ul class="mb-3">';
-            for (const [name, err] of Object.entries(json.errors)) {
-                const txt = (err === null || err === undefined)
-                    ? 'N/A'
-                    : err.toFixed(2) + ' %';
-                errorsHtml += `<li><strong>${name}</strong> : ${txt}</li>`;
-            }
-            errorsHtml += '</ul>';
-        }
-
-        let rankingHtml = '';
-        // Utiliser le top3 reçu du backend
-        if (json.top3 && json.top3.length > 0) {
-            rankingHtml += '<p class="mb-1 fw-semibold">🏆 Meilleurs scores</p>';
-            rankingHtml += '<ol class="mb-0">';
-            json.top3.forEach((entry) => {
-                rankingHtml += `<li>${entry.name || 'Joueur'} – <strong>${entry.score} pts</strong></li>`;
-            });
-            rankingHtml += '</ol>';
-        }
-
-        const playerLabel = currentPlayerName || 'Joueur';
-
-        const html = `
-            <div class="alert alert-info mt-2 mb-0" role="alert">
-                <h5 class="alert-heading mb-2">Partie terminée 🎉</h5>
-                <p class="mb-1">
-                    <strong>${playerLabel}</strong>, votre score est de
-                    <strong>${json.score.toFixed(1)} points</strong>.
-                </p>
-                <p class="mb-2">Erreurs de température par Raspberry Pi (en %) :</p>
-                ${errorsHtml}
-                ${rankingHtml}
-            </div>
-        `;
-
-        gameStatusDiv.innerHTML = html;
-    }
 
     const submitBtn = document.getElementById('submitBtn');
 
@@ -1070,8 +1027,6 @@
                 gameInterval = null;
                 stopCountdown();
                 countdownTimerDiv.classList.add('d-none');
-
-                renderResultsAndLeaderboard(json);
 
                 renderOllamaResponses(json.ollama_responses);
                 updateMaxTempsFromBackend(json.actual_temperatures);

@@ -61,22 +61,52 @@ def estimate_tokens(text):
 
 
 def call_ollama(rpi, prompt, model="gemma3:270m"):
-    """Appelle Ollama sur un Raspberry Pi donné. Retourne (name, response, token_count)"""
+    """Appelle Ollama en mode streaming. Retourne les tokens partiels si timeout/erreur."""
     name = rpi["name"]
     url = rpi["ollama_url"]
     print(model)
+    collected = []
+    token_count = 0
+
     try:
-        payload = {"prompt": prompt, "model": model}
-        res = requests.post(url, json=payload, timeout=120)
+        payload = {"prompt": prompt, "model": model, "stream": True}
+        res = requests.post(url, json=payload, timeout=120, stream=True)
         res.raise_for_status()
-        resp_json = res.json()
-        response = resp_json.get("response", "(aucune réponse)")
-        # Utilise eval_count si disponible, sinon estime à partir de la réponse
-        token_count = resp_json.get("eval_count") or estimate_tokens(response)
+
+        for line in res.iter_lines():
+            if not line:
+                continue
+            try:
+                chunk = json.loads(line)
+            except (json.JSONDecodeError, ValueError):
+                continue
+
+            # Réponse non-streaming (API retourne un seul objet JSON)
+            if "response" in chunk and not isinstance(chunk.get("done"), bool):
+                response = chunk.get("response", "(aucune réponse)")
+                token_count = chunk.get("eval_count") or estimate_tokens(response)
+                return name, response, token_count
+
+            # Réponse streaming token par token
+            token = chunk.get("response", "")
+            if token:
+                collected.append(token)
+
+            if chunk.get("done"):
+                token_count = chunk.get("eval_count") or estimate_tokens("".join(collected))
+                break
+
+        response = "".join(collected) or "(aucune réponse)"
+        if not token_count:
+            token_count = estimate_tokens(response)
         return name, response, token_count
+
     except Exception as e:
         print(f"Erreur appel Ollama pour {name} ({url}): {e}")
-        return name, f"🔥🤯 Surchauffe !!", 0
+        if collected:
+            partial = "".join(collected)
+            return name, f"⚠️ *(réponse partielle — interruption)*\n\n{partial}", estimate_tokens(partial)
+        return name, "🔥🤯 Surchauffe !!", 0
 
 
 def fetch_temperatures():
@@ -406,14 +436,15 @@ def api_dialogue_next(request):
 
 # ==================== Puissance instantanée ====================
 
-SMART_PLUG_URL = "http://10.23.206.35/cm?cmnd=Status%208"
+SMART_PLUG_URL = "http://10.181.12.35/cm?cmnd=Status%208"
 
 
 @require_http_methods(["GET"])
 def api_power(request):
     """Récupère la puissance instantanée depuis la prise connectée"""
     try:
-        res = requests.get(SMART_PLUG_URL, timeout=2)
+        # Connection: close évite le keep-alive, incompatible avec Tasmota
+        res = requests.get(SMART_PLUG_URL, timeout=2, headers={"Connection": "close"})
         res.raise_for_status()
         data = res.json()
         energy = data.get("StatusSNS", {}).get("ENERGY", {})
@@ -428,4 +459,4 @@ def api_power(request):
         return JsonResponse({
             "status": "error",
             "message": str(e)
-        }, status=500)
+        })
