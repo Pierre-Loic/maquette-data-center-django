@@ -22,6 +22,11 @@ def _load_rag_contexts():
 # Configuration des Raspberry Pi
 RASPBERRIES = [
     {
+        "name": "Sans refroidissement 🔳",
+        "temp_url": "http://192.168.137.12:8000/metrics/temperature",
+        "ollama_url": "http://192.168.137.12:8000/ollama/generate",
+    },
+    {
         "name": "Refroidissement passif ♨️",
         "temp_url": "http://192.168.137.10:8000/metrics/temperature",
         "ollama_url": "http://192.168.137.10:8000/ollama/generate",
@@ -30,11 +35,6 @@ RASPBERRIES = [
         "name": "Refroidissement actif air 🍃",
         "temp_url": "http://192.168.137.11:8000/metrics/temperature",
         "ollama_url": "http://192.168.137.11:8000/ollama/generate",
-    },
-    {
-         "name": "Refroidissement actif eau 💧",
-         "temp_url": "http://192.168.137.12:8000/metrics/temperature",
-         "ollama_url": "http://192.168.137.12:8000/ollama/generate",
     },
 ]
 
@@ -60,7 +60,7 @@ def estimate_tokens(text):
     return max(1, len(text) // 4)
 
 
-def call_ollama(rpi, prompt, model="gemma3:270m"):
+def call_ollama(rpi, prompt, model="falcon3:1b"):
     """Appelle Ollama en mode streaming. Retourne les tokens partiels si timeout/erreur."""
     name = rpi["name"]
     url = rpi["ollama_url"]
@@ -197,7 +197,7 @@ def api_start_game(request):
         prompt = data.get("prompt", "")
         predictions = data.get("predictions", {}) or {}
         player_name = data.get("player_name", "Joueur")
-        model = data.get("model", "gemma3:270m")
+        model = data.get("model", "falcon3:1b")
 
         # Début de la fenêtre : juste avant l'envoi des prompts
         window_start = time.time()
@@ -311,7 +311,7 @@ def api_game_status(request):
     rpi_mapping = {
         "Refroidissement passif ♨️": (1, "pi1"),
         "Refroidissement actif air 🍃": (2, "pi2"),
-        "Refroidissement actif eau 💧": (3, "pi3"),
+        "Sans refroidissement 🔳": (3, "pi3"),
     }
 
     # Préparer les données pour la sauvegarde
@@ -384,7 +384,7 @@ def api_dialogue_next(request):
     """Génère la prochaine réponse dans le dialogue"""
     try:
         data = json.loads(request.body)
-        model = data.get("model", "gemma3:270m")
+        model = data.get("model", "falcon3:1b")
         model_index = data.get("model_index", 0)
         conversation_history = data.get("conversation_history", [])
 

@@ -452,11 +452,11 @@
                                 <div class="mb-2">
                                     <label for="modelSelect" class="form-label mb-1 small">Taille du modèle</label>
                                     <select id="modelSelect" class="form-select form-select-sm" required>
-                                        <option value="gemma3:270m" data-size="petit">🇺🇸 Gemma3:270m (Petit)</option>
-                                        <option value="qwen3:0.6b" data-size="petit">🇨🇳 Qwen3:0.6b (Petit)</option>
-                                        <option value="falcon3:1b" data-size="moyen">🇦🇪 Falcon3:1b (Moyen)</option>
-                                        <option value="llama3.2:1b" data-size="moyen">🇺🇸 Llama3.2:1b (Moyen)</option>
-                                        <option value="deepseek-r1:1.5b" data-size="grand">🇨🇳 DeepSeek R1:1.5b (Grand)</option>
+                                        <option value="falcon3:1b" data-size="petit">🇦🇪 Falcon3:1b (Petit)</option>
+                                        <option value="deepseek-r1:1.5b" data-size="petit">🇨🇳 DeepSeek R1:1.5b (Petit)</option>
+                                        <option value="gemma4:e2b" data-size="moyen">🇺🇸 Gemma4:e2b (Moyen)</option>
+                                        <option value="qwen3.5:2b" data-size="moyen">🇨🇳 Qwen3.5:2b (Moyen)</option>
+                                        <option value="granite4.1:3b" data-size="grand">🇺🇸 Granite4.1:3b (Grand)</option>
                                         <option value="ministral-3:3b" data-size="grand">🇫🇷 Ministral-3:3b (Grand)</option>
                                     </select>
                                 </div>
@@ -478,11 +478,11 @@
                                 <label for="promptBase" class="form-label">Sujet de la question (prompt)</label>
                                 <select id="promptBase" class="form-select" required>
                                     <option value="">-- Choisissez un sujet --</option>
-                                    <option value="Qu'est-ce que la CSG ?">💰 La CSG</option>
-                                    <option value="Comment fonctionne le prélèvement à la source en France ?">📊 Le prélèvement à la source</option>
-                                    <option value="Quelles sont les principales différences entre impôt sur le revenu et impôt sur les sociétés, et comment sont-ils calculés ?">🏢 IR vs IS</option>
-                                    <option value="Explique les différences entre la fraude fiscale, l'évasion fiscale et l'optimisation fiscale, avec des exemples concrets pour chaque notion.">🔍 Fraude vs évasion vs optimisation fiscale</option>
-                                    <option value="Décris les principales étapes d'un contrôle fiscal d'une PME en France, de son déclenchement jusqu'à sa conclusion, en précisant les droits et obligations du contribuable à chaque étape.">📋 Contrôle fiscal d'une PME</option>
+                                    <option value="Qu'est-ce que l'empreinte carbone et comment est-elle calculée ?">🌍 L'empreinte carbone</option>
+                                    <option value="Comment fonctionne le marché européen du carbone (EU ETS) ?">📊 Le marché européen du carbone</option>
+                                    <option value="Quelles sont les principales sources d'énergie renouvelable et leurs caractéristiques ?">⚡ Les énergies renouvelables</option>
+                                    <option value="Quels sont les effets du changement climatique sur la biodiversité ?">🦋 Climat et biodiversité</option>
+                                    <option value="Qu'est-ce que l'économie circulaire et comment réduit-elle l'impact environnemental ?">♻️ L'économie circulaire</option>
                                 </select>
 
                                 <!-- Toggle RAG -->
@@ -588,15 +588,20 @@
         '#e67e22',
     ];
 
-    const datasets = raspberries.map((name, idx) => ({
-        label: name,
-        data: [],
-        borderColor: COLORS[idx % COLORS.length],
-        backgroundColor: COLORS[idx % COLORS.length] + '33',
-        tension: 0.2,
-        pointRadius: 2,
-        borderWidth: 2,
-    }));
+    const datasets = raspberries.map((name, idx) => {
+        const color = name.startsWith('Sans refroidissement') ? '#000000'
+                    : name.startsWith('Refroidissement passif') ? '#e74c3c'
+                    : COLORS[idx % COLORS.length];
+        return {
+            label: name,
+            data: [],
+            borderColor: color,
+            backgroundColor: color + '33',
+            tension: 0.2,
+            pointRadius: 2,
+            borderWidth: 2,
+        };
+    });
 
     const config = {
         type: 'line',

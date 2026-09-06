@@ -36,14 +36,14 @@ class LeaderboardEntryModelTest(TestCase):
         temps = self.entry.predicted_temps
         self.assertEqual(temps["Refroidissement passif air"], 45.0)
         self.assertEqual(temps["Refroidissement actif air"], 40.0)
-        self.assertEqual(temps["Refroidissement actif eau"], 35.0)
+        self.assertEqual(temps["Sans refroidissement"], 35.0)
 
     def test_max_temps_property(self):
         """Test la propriété max_temps"""
         temps = self.entry.max_temps
         self.assertEqual(temps["Refroidissement passif air"], 46.5)
         self.assertEqual(temps["Refroidissement actif air"], 41.2)
-        self.assertEqual(temps["Refroidissement actif eau"], 36.8)
+        self.assertEqual(temps["Sans refroidissement"], 36.8)
 
     def test_ordering(self):
         """Test l'ordre par défaut (points décroissants)"""

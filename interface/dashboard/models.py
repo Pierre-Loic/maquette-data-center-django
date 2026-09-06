@@ -39,7 +39,7 @@ class LeaderboardEntry(models.Model):
         return {
             "Refroidissement passif air": self.predicted_temp_pi1,
             "Refroidissement actif air": self.predicted_temp_pi2,
-            "Refroidissement actif eau": self.predicted_temp_pi3,
+            "Sans refroidissement": self.predicted_temp_pi3,
         }
 
     @property
@@ -47,7 +47,7 @@ class LeaderboardEntry(models.Model):
         return {
             "Refroidissement passif air": self.max_temp_pi1,
             "Refroidissement actif air": self.max_temp_pi2,
-            "Refroidissement actif eau": self.max_temp_pi3,
+            "Sans refroidissement": self.max_temp_pi3,
         }
 
     @property
@@ -55,5 +55,5 @@ class LeaderboardEntry(models.Model):
         return {
             "Refroidissement passif air": self.answer_pi1,
             "Refroidissement actif air": self.answer_pi2,
-            "Refroidissement actif eau": self.answer_pi3,
+            "Sans refroidissement": self.answer_pi3,
         }
