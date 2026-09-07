@@ -23,18 +23,18 @@ def _load_rag_contexts():
 RASPBERRIES = [
     {
         "name": "Sans refroidissement 🔳",
-        "temp_url": "http://192.168.137.12:8000/metrics/temperature",
-        "ollama_url": "http://192.168.137.12:8000/ollama/generate",
-    },
-    {
-        "name": "Refroidissement passif ♨️",
         "temp_url": "http://192.168.137.10:8000/metrics/temperature",
         "ollama_url": "http://192.168.137.10:8000/ollama/generate",
     },
     {
-        "name": "Refroidissement actif air 🍃",
+        "name": "Refroidissement passif ♨️",
         "temp_url": "http://192.168.137.11:8000/metrics/temperature",
         "ollama_url": "http://192.168.137.11:8000/ollama/generate",
+    },
+    {
+        "name": "Refroidissement actif air 🍃",
+        "temp_url": "http://192.168.137.12:8000/metrics/temperature",
+        "ollama_url": "http://192.168.137.12:8000/ollama/generate",
     },
 ]
 
