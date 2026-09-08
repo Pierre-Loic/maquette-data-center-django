@@ -70,7 +70,7 @@ def call_ollama(rpi, prompt, model="falcon3:1b"):
 
     try:
         payload = {"prompt": prompt, "model": model, "stream": True}
-        res = requests.post(url, json=payload, timeout=120, stream=True)
+        res = requests.post(url, json=payload, timeout=300, stream=True)
         res.raise_for_status()
 
         for line in res.iter_lines():
