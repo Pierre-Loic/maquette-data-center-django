@@ -109,9 +109,9 @@ def call_ollama(rpi, prompt, model="falcon3:1b"):
         return name, "🔥🤯 Surchauffe !!", 0
 
 
-def fetch_temperatures():
-    """Récupère les températures de tous les Raspberry Pi"""
-    temps = {}
+def fetch_metrics():
+    """Récupère toutes les métriques système de tous les Raspberry Pi."""
+    metrics = {}
     for rpi in RASPBERRIES:
         name = rpi["name"]
         url = rpi["temp_url"]
@@ -119,11 +119,24 @@ def fetch_temperatures():
             res = requests.get(url, timeout=2)
             res.raise_for_status()
             data = res.json()
-            temps[name] = data.get("temperature_c")
+            cpu_load = data.get("cpu_load_percent")
+            cpu_freq = data.get("cpu_freq_mhz")
+            metrics[name] = {
+                "temperature_c":    data.get("temperature_c"),
+                "ram_used_percent": data.get("ram_used_percent"),
+                "cpu_load_percent": cpu_load.get("avg") if isinstance(cpu_load, dict) else cpu_load,
+                "cpu_freq_mhz":     cpu_freq.get("avg") if isinstance(cpu_freq, dict) else cpu_freq,
+            }
         except Exception as e:
-            print(f"Erreur pour {name} ({url}): {e}")
-            temps[name] = None
-    return temps
+            print(f"Erreur métriques pour {name} ({url}): {e}")
+            metrics[name] = {"temperature_c": None, "ram_used_percent": None,
+                             "cpu_load_percent": None, "cpu_freq_mhz": None}
+    return metrics
+
+
+def fetch_temperatures():
+    """Extrait uniquement les températures (pour temperature_samples)."""
+    return {name: m["temperature_c"] for name, m in fetch_metrics().items()}
 
 
 class HomeView(TemplateView):
@@ -168,21 +181,24 @@ class LeaderboardView(ListView):
 
 @require_http_methods(["GET"])
 def api_temperatures(request):
-    """Retourne les températures actuelles de tous les Raspberry Pi"""
-    temps = fetch_temperatures()
+    """Retourne les métriques système actuelles de tous les Raspberry Pi."""
+    all_metrics = fetch_metrics()
     now = time.time()
 
-    # Stocke l'échantillon
-    temperature_samples.append((now, temps))
+    temps = {name: m["temperature_c"] for name, m in all_metrics.items()}
 
-    # Nettoyage : garde les 10 dernières minutes max
+    # Stocke l'échantillon de température (pour le calcul des max en fin de partie)
+    temperature_samples.append((now, temps))
     cutoff = now - 600
     while temperature_samples and temperature_samples[0][0] < cutoff:
         temperature_samples.pop(0)
 
     return JsonResponse({
         "timestamp": time.strftime("%H:%M:%S"),
-        "temperatures": temps
+        "temperatures":    temps,
+        "ram_used_percent":  {name: m["ram_used_percent"]  for name, m in all_metrics.items()},
+        "cpu_load_percent":  {name: m["cpu_load_percent"]  for name, m in all_metrics.items()},
+        "cpu_freq_mhz":      {name: m["cpu_freq_mhz"]      for name, m in all_metrics.items()},
     })
 
 

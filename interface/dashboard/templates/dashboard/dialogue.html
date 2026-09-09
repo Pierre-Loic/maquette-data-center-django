@@ -194,9 +194,16 @@
                     </div>
                     <div id="currentTemps" class="small">
                         {% for name in raspberries %}
-                        <div class="d-flex justify-content-between temp-current py-1 border-bottom">
-                            <span>{{ name }}</span>
-                            <span class="temp-value" data-name="{{ name }}">-- °C</span>
+                        <div class="py-1 border-bottom">
+                            <div class="d-flex justify-content-between">
+                                <span class="text-truncate me-2" style="max-width:60%;">{{ name }}</span>
+                                <span class="fw-semibold temp-value" data-name="{{ name }}">-- °C</span>
+                            </div>
+                            <div class="d-flex gap-2 text-muted" style="font-size:0.7rem;">
+                                <span>RAM: <span class="fw-semibold" data-dial-ram="{{ name }}">--%</span></span>
+                                <span>CPU: <span class="fw-semibold" data-dial-cpu="{{ name }}">--%</span></span>
+                                <span>Fréq: <span class="fw-semibold" data-dial-freq="{{ name }}">-- MHz</span></span>
+                            </div>
                         </div>
                         {% endfor %}
                     </div>
@@ -275,6 +282,11 @@
 
     const tempChart = new Chart(ctx, config);
 
+    function _setMetricDial(selector, value, unit, decimals = 1) {
+        const el = document.querySelector(selector);
+        if (el) el.textContent = value != null ? `${value.toFixed(decimals)}${unit}` : `--${unit}`;
+    }
+
     async function fetchTemperatures() {
         try {
             const response = await fetch('{% url "api_temperatures" %}');
@@ -289,11 +301,12 @@
                 dataset.data.push(temp);
                 if (dataset.data.length > 30) dataset.data.shift();
 
-                // Mise à jour des valeurs actuelles
                 const valueSpan = document.querySelector(`.temp-value[data-name="${name}"]`);
-                if (valueSpan) {
-                    valueSpan.textContent = temp != null ? `${temp.toFixed(1)} °C` : '-- °C';
-                }
+                if (valueSpan) valueSpan.textContent = temp != null ? `${temp.toFixed(1)} °C` : '-- °C';
+
+                _setMetricDial(`[data-dial-ram="${name}"]`,  json.ram_used_percent?.[name],  '%');
+                _setMetricDial(`[data-dial-cpu="${name}"]`,  json.cpu_load_percent?.[name],  '%');
+                _setMetricDial(`[data-dial-freq="${name}"]`, json.cpu_freq_mhz?.[name],      ' MHz', 0);
             });
 
             tempChart.update();

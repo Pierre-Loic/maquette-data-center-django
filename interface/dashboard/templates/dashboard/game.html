@@ -189,6 +189,19 @@
         transition: color 0.4s ease;
     }
 
+    .live-metric-bar {
+        height: 4px;
+        border-radius: 2px;
+        background: #dee2e6;
+        overflow: hidden;
+        margin-top: 2px;
+    }
+    .live-metric-bar-fill {
+        height: 100%;
+        border-radius: 2px;
+        transition: width 0.6s ease, background 0.4s ease;
+    }
+
     /* ---- Encadré RAG ---- */
     #ragToggle.rag-off {
         border-color: #6c757d;
@@ -387,13 +400,20 @@
                                 </div>
                             </div>
 
-                            <!-- Colonne milieu : températures CPU + puissance (step-2 seulement) -->
+                            <!-- Colonne milieu : métriques live + puissance (step-2 seulement) -->
                             <div id="tempsCol">
-                                <div class="banner-label">🌡️ Températures CPU</div>
+                                <div class="banner-label">🌡️ Métriques CPU</div>
                                 {% for name in raspberries %}
-                                <div class="d-flex align-items-center justify-content-between px-2 py-1 rounded border bg-white">
-                                    <span class="small text-truncate me-2" style="max-width:60%;">{{ name }}</span>
-                                    <span class="live-temp-banner temp-unknown" data-banner-name="{{ name }}">-- °C</span>
+                                <div class="px-2 py-1 rounded border bg-white mb-1">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <span class="small text-truncate me-2" style="max-width:55%;">{{ name }}</span>
+                                        <span class="live-temp-banner temp-unknown" data-banner-name="{{ name }}">-- °C</span>
+                                    </div>
+                                    <div class="d-flex gap-2 mt-1" style="font-size:0.7rem; color:#6c757d;">
+                                        <span>RAM: <span class="fw-semibold" data-banner-ram="{{ name }}">--%</span></span>
+                                        <span>CPU: <span class="fw-semibold" data-banner-cpu="{{ name }}">--%</span></span>
+                                        <span>Fréq: <span class="fw-semibold" data-banner-freq="{{ name }}">-- MHz</span></span>
+                                    </div>
                                 </div>
                                 {% endfor %}
                                 <hr class="my-1">
@@ -534,9 +554,16 @@
                                 </div>
                                 <div class="d-flex flex-column gap-2">
                                     {% for name in raspberries %}
-                                    <div class="d-flex align-items-center justify-content-between px-2 py-1 rounded border" style="background:#f8f9fa;">
-                                        <span class="small text-truncate me-2" style="max-width:65%;">{{ name }}</span>
-                                        <span class="fw-bold live-temp-inline temp-unknown" data-inline-name="{{ name }}">-- °C</span>
+                                    <div class="px-2 py-1 rounded border" style="background:#f8f9fa;">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <span class="small text-truncate me-2" style="max-width:65%;">{{ name }}</span>
+                                            <span class="fw-bold live-temp-inline temp-unknown" data-inline-name="{{ name }}">-- °C</span>
+                                        </div>
+                                        <div class="d-flex gap-2 mt-1" style="font-size:0.75rem; color:#6c757d;">
+                                            <span>RAM: <span class="fw-semibold" data-inline-ram="{{ name }}">--%</span></span>
+                                            <span>CPU: <span class="fw-semibold" data-inline-cpu="{{ name }}">--%</span></span>
+                                            <span>Fréq: <span class="fw-semibold" data-inline-freq="{{ name }}">-- MHz</span></span>
+                                        </div>
                                     </div>
                                     {% endfor %}
                                 </div>
@@ -695,10 +722,24 @@
         }
     }
 
+    function _setTemp(el, temp, baseClass) {
+        if (!el) return;
+        el.textContent = temp != null ? `${temp.toFixed(1)} °C` : '-- °C';
+        el.className = baseClass;
+        el.classList.add(temp == null ? 'temp-unknown' : temp < 50 ? 'temp-cool' : temp < 65 ? 'temp-warm' : 'temp-hot');
+    }
+
+    function _setMetric(selector, value, unit, decimals = 1) {
+        const el = document.querySelector(selector);
+        if (el) el.textContent = value != null ? `${value.toFixed(decimals)}${unit}` : `--${unit}`;
+    }
+
     async function fetchTemperatures() {
         try {
             const response = await fetch('{% url "api_temperatures" %}');
             const json = await response.json();
+
+            console.log('[DEBUG metrics]', json);
 
             labels.push(json.timestamp);
             if (labels.length > 50) labels.shift();
@@ -709,38 +750,29 @@
                 dataset.data.push(temp);
                 if (dataset.data.length > 50) dataset.data.shift();
 
-                // Mise à jour du grand indicateur live (étape 3)
-                const liveEl = document.querySelector(`.rpi-live-temp[data-live-name="${name}"]`);
-                if (liveEl) {
-                    liveEl.textContent = temp != null ? `${temp.toFixed(1)} °C` : '-- °C';
-                    liveEl.className = 'rpi-live-temp';
-                    if (temp == null)       liveEl.classList.add('temp-unknown');
-                    else if (temp < 50)     liveEl.classList.add('temp-cool');
-                    else if (temp < 65)     liveEl.classList.add('temp-warm');
-                    else                    liveEl.classList.add('temp-hot');
-                }
+                // Grand indicateur live (étape 3)
+                _setTemp(document.querySelector(`.rpi-live-temp[data-live-name="${name}"]`), temp, 'rpi-live-temp');
 
-                // Mise à jour du badge inline (panneau de droite, step-1)
-                const inlineEl = document.querySelector(`.live-temp-inline[data-inline-name="${name}"]`);
-                if (inlineEl) {
-                    inlineEl.textContent = temp != null ? `${temp.toFixed(1)} °C` : '-- °C';
-                    inlineEl.className = 'fw-bold live-temp-inline';
-                    if (temp == null)       inlineEl.classList.add('temp-unknown');
-                    else if (temp < 50)     inlineEl.classList.add('temp-cool');
-                    else if (temp < 65)     inlineEl.classList.add('temp-warm');
-                    else                    inlineEl.classList.add('temp-hot');
-                }
+                // Badge inline (panneau formulaire, step-1)
+                _setTemp(document.querySelector(`.live-temp-inline[data-inline-name="${name}"]`), temp, 'fw-bold live-temp-inline');
 
-                // Mise à jour de la bannière (bandeau supérieur step-2)
-                const bannerEl = document.querySelector(`.live-temp-banner[data-banner-name="${name}"]`);
-                if (bannerEl) {
-                    bannerEl.textContent = temp != null ? `${temp.toFixed(1)} °C` : '-- °C';
-                    bannerEl.className = 'live-temp-banner';
-                    if (temp == null)       bannerEl.classList.add('temp-unknown');
-                    else if (temp < 50)     bannerEl.classList.add('temp-cool');
-                    else if (temp < 65)     bannerEl.classList.add('temp-warm');
-                    else                    bannerEl.classList.add('temp-hot');
-                }
+                // Bannière (bandeau supérieur, step-2)
+                _setTemp(document.querySelector(`.live-temp-banner[data-banner-name="${name}"]`), temp, 'live-temp-banner');
+
+                // RAM
+                const ram = json.ram_used_percent?.[name];
+                _setMetric(`[data-inline-ram="${name}"]`, ram, '%');
+                _setMetric(`[data-banner-ram="${name}"]`, ram, '%');
+
+                // Charge CPU
+                const cpu = json.cpu_load_percent?.[name];
+                _setMetric(`[data-inline-cpu="${name}"]`, cpu, '%');
+                _setMetric(`[data-banner-cpu="${name}"]`, cpu, '%');
+
+                // Fréquence CPU
+                const freq = json.cpu_freq_mhz?.[name];
+                _setMetric(`[data-inline-freq="${name}"]`, freq, ' MHz', 0);
+                _setMetric(`[data-banner-freq="${name}"]`, freq, ' MHz', 0);
             });
 
             tempChart.update();
