@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Maquette Data Center
+Comment=Démarrer/arrêter le serveur Django et les Raspberry Pi de la maquette
+Exec=/home/plb/maquette-data-center-django/launcher/run.sh
+Icon=computer
+Terminal=false
+Categories=Utility;
+StartupNotify=true

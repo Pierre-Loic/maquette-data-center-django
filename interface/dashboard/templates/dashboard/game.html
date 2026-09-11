@@ -121,6 +121,15 @@
         border-radius: 0.2rem;
     }
 
+    /* Curseur clignotant pendant le streaming des tokens */
+    .stream-caret {
+        display: inline-block;
+        margin-left: 1px;
+        color: var(--miai-orange);
+        animation: stream-blink 1s steps(1) infinite;
+    }
+    @keyframes stream-blink { 50% { opacity: 0; } }
+
     /* ---- Graphique ---- */
     .chart-wrapper {
         flex: 0 0 50%;
@@ -308,7 +317,14 @@
     .step-2 #tempsCol  { display: flex !important; flex: 0 0 33% !important; }
     .step-2 #summaryCol{ display: flex !important; flex: 0 0 33% !important; }
     .step-2 .rpi-blocks-scroll { flex: 1 !important; display: flex !important; }
-    .step-2 .rpi-response { max-height: none !important; flex: 1 !important; }
+    /* Bloc réponse à taille fixe + scroll vertical, laisse la place au coût énergétique dessous */
+    .step-2 .rpi-response {
+        flex: 0 0 auto !important;
+        height: 220px !important;
+        max-height: 38vh !important;
+        overflow-y: auto !important;
+    }
+    .step-2 .rpi-energy-cost { flex: 0 0 auto !important; }
 
     /* ---- Panneaux bandeau step-2 ---- */
     #tempsCol, #summaryCol {
@@ -416,12 +432,6 @@
                                     </div>
                                 </div>
                                 {% endfor %}
-                                <hr class="my-1">
-                                <div class="banner-label">⚡ Puissance totale</div>
-                                <div class="d-flex align-items-center gap-2">
-                                    <span id="bannerPowerValue" class="fw-bold" style="font-size:1.6rem;">-- W</span>
-                                    <span class="text-muted small">(3 Raspberry Pi)</span>
-                                </div>
                             </div>
 
                             <!-- Colonne droite : résumé des paramètres envoyés (step-2 seulement) -->
@@ -570,7 +580,7 @@
                             </div>
 
                             <!-- Puissance électrique globale -->
-                            <div class="d-flex align-items-center justify-content-between">
+                            <div class="d-none align-items-center justify-content-between">
                                 <div>
                                     <span class="small fw-semibold text-muted">⚡ Puissance électrique totale</span><br>
                                     <div id="powerDisplay" class="power-display inactive">
@@ -674,6 +684,11 @@
                     <p class="rpi-token-count text-muted">Tokens générés (estimation) : --</p>
                     <h4 class="h6">Réponse du modèle</h4>
                     <div class="rpi-response"><em>(en attente...)</em></div>
+                    <div class="rpi-energy-cost mt-2 p-2 rounded" style="background:#f1f3f5;font-size:1.05rem;flex:0 0 auto;line-height:1.5;">
+                        <div class="rpi-energy-line fw-semibold">⚡ --</div>
+                        <div class="rpi-co2-line fw-semibold">🌍 --</div>
+                        <div class="rpi-gpt-compare mt-1 pt-1" style="border-top:1px dashed #ced4da;"></div>
+                    </div>
                 </div>
             </div>
         `;
@@ -689,7 +704,69 @@
             p.textContent = "Température max pendant l'inférence : -- °C";
             const pTokens = block.querySelector('.rpi-token-count');
             pTokens.textContent = "Tokens générés (estimation) : --";
+            const eLine = block.querySelector('.rpi-energy-line');
+            const eCo2 = block.querySelector('.rpi-co2-line');
+            const eGpt = block.querySelector('.rpi-gpt-compare');
+            if (eLine) eLine.textContent = '⚡ calcul en cours…';
+            if (eCo2) eCo2.textContent = '🌍 --';
+            if (eGpt) eGpt.textContent = '';
         });
+    }
+
+    // Puissance constante supposée pendant la génération (W)
+    const POWER_WATTS = 14;
+    // Facteur de conversion électricité → gaz à effet de serre (kgCO2eq / kWh)
+    const CO2_FACTOR_KG_PER_KWH = 0.041440;
+    // Consommation d'un modèle GPT 5.5 : 0.728 Wh pour 100 tokens générés
+    const GPT_WH_PER_100_TOKENS = 0.728;
+
+    // Grammes de CO2eq pour une énergie donnée en Wh
+    function whToCo2Grams(wh) {
+        return (wh / 1000) * CO2_FACTOR_KG_PER_KWH * 1000;
+    }
+
+    function updateEnergyCosts(generationTimes, energyCosts, tokenCounts) {
+        if (!generationTimes) return;
+        for (const name of raspberries) {
+            const block = rpiBlocks[name];
+            if (!block) continue;
+            const eLine = block.querySelector('.rpi-energy-line');
+            const eCo2 = block.querySelector('.rpi-co2-line');
+            const eGpt = block.querySelector('.rpi-gpt-compare');
+            if (!eLine) continue;
+
+            const seconds = generationTimes[name];
+            if (seconds == null) {
+                eLine.textContent = '⚡ N/A';
+                if (eCo2) eCo2.textContent = '🌍 N/A';
+                if (eGpt) eGpt.textContent = '';
+                continue;
+            }
+
+            // Wh fourni par le backend, sinon recalcul : P × t / 3600
+            const wh = (energyCosts && energyCosts[name] != null)
+                ? energyCosts[name]
+                : POWER_WATTS * seconds / 3600;
+            const co2mg = whToCo2Grams(wh) * 1000;
+
+            eLine.textContent = `⚡ ${wh.toFixed(3)} Wh`;
+            if (eCo2) eCo2.textContent = `🌍 ${co2mg.toFixed(1)} mgCO₂eq`;
+
+            // Équivalent pour le même nombre de tokens avec un modèle GPT 5.5
+            if (eGpt) {
+                const tokens = tokenCounts ? tokenCounts[name] : null;
+                if (tokens == null) {
+                    eGpt.textContent = '';
+                } else {
+                    const gptWh = (tokens / 100) * GPT_WH_PER_100_TOKENS;
+                    const gptCo2mg = whToCo2Grams(gptWh) * 1000;
+                    eGpt.innerHTML =
+                        `<div class="fw-semibold">🤖 Équivalent GPT 5.5</div>` +
+                        `<div>⚡ ${gptWh.toFixed(3)} Wh</div>` +
+                        `<div>🌍 ${gptCo2mg.toFixed(1)} mgCO₂eq</div>`;
+                }
+            }
+        }
     }
 
     function updateTokenCounts(tokenCounts) {
@@ -792,6 +869,11 @@
     let powerEnabled = false;
     let powerInterval = null;
 
+    function setBannerPower(txt) {
+        const el = document.getElementById('bannerPowerValue');
+        if (el) el.textContent = txt;
+    }
+
     async function fetchPower() {
         try {
             const response = await fetch('{% url "api_power" %}');
@@ -799,15 +881,15 @@
             if (json.status === 'success' && json.power != null) {
                 const txt = `${json.power} W`;
                 powerValue.textContent = txt;
-                document.getElementById('bannerPowerValue').textContent = txt;
+                setBannerPower(txt);
             } else {
                 powerValue.textContent = 'Erreur';
-                document.getElementById('bannerPowerValue').textContent = 'Erreur';
+                setBannerPower('Erreur');
             }
         } catch (err) {
             console.error('Erreur en récupérant la puissance:', err);
             powerValue.textContent = 'Erreur';
-            document.getElementById('bannerPowerValue').textContent = 'Erreur';
+            setBannerPower('Erreur');
         }
     }
 
@@ -826,7 +908,7 @@
             powerToggle.classList.remove('btn-warning');
             powerToggle.classList.add('btn-outline-warning');
             powerValue.textContent = '-- W';
-            document.getElementById('bannerPowerValue').textContent = '-- W';
+            setBannerPower('-- W');
             if (powerInterval) {
                 clearInterval(powerInterval);
                 powerInterval = null;
@@ -849,10 +931,17 @@
     let countdownInterval = null;
     let countdownEndTime = null;
     let countdownTotal = null;
+    let countdownStarted = false;
+    let pendingCountdownSeconds = null;
+
+    // Streaming SSE des réponses
+    let evtSource = null;
+    const streamBuffers = {};   // nom RPi -> texte accumulé
+    const streamTokens = {};    // nom RPi -> nb de tokens
 
     let currentPlayerName = '';
 
-    function renderOllamaResponses(responses) {
+    function renderOllamaResponses(responses, streaming = false) {
         if (!responses) {
             raspberries.forEach((name) => {
                 const block = rpiBlocks[name];
@@ -867,12 +956,28 @@
         }
 
         raspberries.forEach((name) => {
-            const text = responses[name] ?? '(aucune réponse)';
             const block = rpiBlocks[name];
             if (!block) return;
             const container = block.querySelector('.rpi-response');
-            // Convertir le markdown en HTML
-            container.innerHTML = marked.parse(text);
+            const raw = responses[name];
+
+            if (streaming && (raw == null || raw === '')) {
+                container.innerHTML = '<em>(génération en cours…)</em>';
+                return;
+            }
+
+            const text = raw ?? '(aucune réponse)';
+
+            // Ne recolle en bas que si l'utilisateur y était déjà (sinon on le
+            // laisse relire tranquillement une partie plus haut)
+            const wasAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 24;
+
+            // Convertir le markdown en HTML (curseur pendant le streaming)
+            container.innerHTML = marked.parse(text) + (streaming ? '<span class="stream-caret">▋</span>' : '');
+
+            if (streaming && wasAtBottom) {
+                container.scrollTop = container.scrollHeight;
+            }
         });
 
         if (ollamaResponsesDiv) {
@@ -1017,20 +1122,18 @@
             const json = await res.json();
 
             if (json.status === 'started') {
-                renderOllamaResponses(json.ollama_responses);
                 resetMaxTempDisplay();
+                renderOllamaResponses(json.ollama_responses, true);
                 updateTokenCounts(json.token_counts);
 
-                gameStatusDiv.textContent = `Réponses reçues ! Mesure de la température en cours...`;
+                // Le compte à rebours ne démarre qu'une fois les 3 réponses générées
+                countdownStarted = false;
+                pendingCountdownSeconds = json.countdown_seconds ?? null;
 
-                // Démarrer le compte à rebours de 10 secondes
-                if (json.countdown_seconds != null) {
-                    startCountdown(json.countdown_seconds);
-                } else {
-                    startCountdown(null);
-                }
+                gameStatusDiv.textContent = `Génération des réponses en cours...`;
 
-                startPollingGameStatus();
+                // Flux SSE : affichage des tokens au fil de l'eau
+                startResponseStream();
             } else {
                 gameStatusDiv.textContent = 'Impossible de lancer la partie.';
                 // Réactiver le bouton en cas d'erreur
@@ -1053,10 +1156,24 @@
 
             if (json.status === 'no_game') return;
 
+            // Génération en cours : texte et compteurs de tokens au fil de l'eau
+            // (le coût énergétique/CO2 nécessite le temps total, calculé à la fin)
+            if (json.status === 'streaming') {
+                gameStatusDiv.textContent = `Génération des réponses en cours...`;
+                renderOllamaResponses(json.ollama_responses, true);
+                updateTokenCounts(json.token_counts);
+            }
+
             if (json.status === 'waiting') {
+                // Première transition streaming → waiting : on lance le compte à rebours
+                if (!countdownStarted) {
+                    countdownStarted = true;
+                    startCountdown(pendingCountdownSeconds || null);
+                }
                 gameStatusDiv.textContent = `Mesure de la température pendant l'inférence...`;
                 renderOllamaResponses(json.ollama_responses);
                 updateTokenCounts(json.token_counts);
+                updateEnergyCosts(json.generation_times, json.energy_costs, json.token_counts);
             }
 
             if (json.status === 'finished') {
@@ -1068,6 +1185,7 @@
                 renderOllamaResponses(json.ollama_responses);
                 updateMaxTempsFromBackend(json.actual_temperatures);
                 updateTokenCounts(json.token_counts);
+                updateEnergyCosts(json.generation_times, json.energy_costs, json.token_counts);
 
                 // Réactiver le bouton une fois la partie terminée
                 submitBtn.disabled = false;
@@ -1081,7 +1199,56 @@
 
     function startPollingGameStatus() {
         if (gameInterval) clearInterval(gameInterval);
-        gameInterval = setInterval(checkGameStatus, 3000);
+        // Polling de la phase mesure température / fin de partie / score
+        gameInterval = setInterval(checkGameStatus, 1000);
+        checkGameStatus();
+    }
+
+    // ---- Streaming SSE : affichage des réponses token par token ----
+    function renderStreamState(streaming) {
+        renderOllamaResponses(streamBuffers, streaming);
+        updateTokenCounts(streamTokens);
+    }
+
+    function startResponseStream() {
+        if (evtSource) { evtSource.close(); evtSource = null; }
+        raspberries.forEach((n) => { streamBuffers[n] = ''; streamTokens[n] = 0; });
+        renderStreamState(true);
+
+        evtSource = new EventSource('{% url "api_game_stream" %}');
+
+        evtSource.onmessage = (e) => {
+            let msg;
+            try { msg = JSON.parse(e.data); } catch (_) { return; }
+
+            if (msg.type === 'snapshot') {
+                raspberries.forEach((n) => {
+                    streamBuffers[n] = (msg.responses && msg.responses[n]) || '';
+                    streamTokens[n] = (msg.token_counts && msg.token_counts[n]) || 0;
+                });
+                renderStreamState(true);
+            } else if (msg.type === 'token') {
+                streamBuffers[msg.name] = msg.text;
+                streamTokens[msg.name] = msg.tokens;
+                renderStreamState(true);
+            } else if (msg.type === 'rpi_done') {
+                streamBuffers[msg.name] = msg.text;
+                streamTokens[msg.name] = msg.tokens;
+                renderStreamState(true);
+            } else if (msg.type === 'all_done') {
+                evtSource.close();
+                evtSource = null;
+                renderStreamState(false);   // retire les curseurs
+                // La phase mesure température peut démarrer
+                startPollingGameStatus();
+            }
+        };
+
+        evtSource.onerror = () => {
+            // Repli sur le polling si le flux SSE tombe
+            if (evtSource) { evtSource.close(); evtSource = null; }
+            startPollingGameStatus();
+        };
     }
 
     const modelSelect = document.getElementById('modelSelect');
@@ -1171,6 +1338,9 @@
         stepBtns.forEach(btn => {
             btn.classList.toggle('active', parseInt(btn.dataset.step) === step);
         });
+        // Masque les légendes des courbes en vue "Réponses" (graphique trop petit)
+        tempChart.options.plugins.legend.display = step !== 2;
+        tempChart.update();
         setTimeout(() => tempChart.resize(), 480);
     }
 
