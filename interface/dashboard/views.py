@@ -21,23 +21,28 @@ def _load_rag_contexts():
     except Exception:
         return {}
 
-# Configuration des Raspberry Pi
+# Configuration des Raspberry Pi. En mode démo (variable d'environnement
+# PI_SIMULATOR=1, positionnée par le panneau de contrôle du launcher quand
+# la case « Mode démo » est cochée), on pointe vers simulator/pi_simulator.py
+# au lieu des adresses IP réelles du rack — les ports doivent rester
+# cohérents avec PROFILES dans ce script.
+_USE_PI_SIMULATOR = os.environ.get("PI_SIMULATOR") == "1"
+
+_RASPBERRY_HOSTS = [
+    ("Sans refroidissement 🔳", "192.168.137.10", 8001),
+    ("Refroidissement passif ♨️", "192.168.137.11", 8002),
+    ("Refroidissement actif air 🍃", "192.168.137.12", 8003),
+]
+
 RASPBERRIES = [
     {
-        "name": "Sans refroidissement 🔳",
-        "temp_url": "http://192.168.137.10:8000/metrics/temperature",
-        "ollama_url": "http://192.168.137.10:8000/ollama/generate",
-    },
-    {
-        "name": "Refroidissement passif ♨️",
-        "temp_url": "http://192.168.137.11:8000/metrics/temperature",
-        "ollama_url": "http://192.168.137.11:8000/ollama/generate",
-    },
-    {
-        "name": "Refroidissement actif air 🍃",
-        "temp_url": "http://192.168.137.12:8000/metrics/temperature",
-        "ollama_url": "http://192.168.137.12:8000/ollama/generate",
-    },
+        "name": name,
+        "temp_url": f"http://127.0.0.1:{sim_port}/metrics/temperature" if _USE_PI_SIMULATOR
+                    else f"http://{host}:8000/metrics/temperature",
+        "ollama_url": f"http://127.0.0.1:{sim_port}/ollama/generate" if _USE_PI_SIMULATOR
+                      else f"http://{host}:8000/ollama/generate",
+    }
+    for name, host, sim_port in _RASPBERRY_HOSTS
 ]
 
 # État du jeu en mémoire (pour une vraie app, utiliser cache Django ou Redis)

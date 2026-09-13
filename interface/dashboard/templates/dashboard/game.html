@@ -307,7 +307,8 @@
     .step-1 #colChart { width: 60% !important; max-width: 60% !important; flex: 0 0 60% !important; }
     .step-1 #colForm  { width: 40% !important; max-width: 40% !important; flex: 0 0 40% !important; }
     .step-1 .rpi-blocks-scroll { display: none !important; }
-    .step-1 .chart-wrapper { flex: 1 !important; max-height: none !important; }
+    .step-1 #topRow { flex: 1 1 auto !important; align-items: center; }
+    .step-1 .chart-wrapper { flex: 1 !important; max-height: none !important; align-self: stretch; }
 
     /* Étape 2 : bandeau 3 colonnes + réponses */
     .step-2 #colChart  { width: 100% !important; max-width: 100% !important; flex: 0 0 100% !important; }
@@ -682,6 +683,7 @@
                     <h3 class="h6 mb-0">${name}</h3>
                     <p class="rpi-max-temp text-muted">Température max pendant l'inférence : -- °C</p>
                     <p class="rpi-token-count text-muted">Tokens générés (estimation) : --</p>
+                    <p class="rpi-tokens-per-sec text-muted">Tokens par seconde : --</p>
                     <h4 class="h6">Réponse du modèle</h4>
                     <div class="rpi-response"><em>(en attente...)</em></div>
                     <div class="rpi-energy-cost mt-2 p-2 rounded" style="background:#f1f3f5;font-size:1.05rem;flex:0 0 auto;line-height:1.5;">
@@ -704,6 +706,8 @@
             p.textContent = "Température max pendant l'inférence : -- °C";
             const pTokens = block.querySelector('.rpi-token-count');
             pTokens.textContent = "Tokens générés (estimation) : --";
+            const pTokensPerSec = block.querySelector('.rpi-tokens-per-sec');
+            if (pTokensPerSec) pTokensPerSec.textContent = "Tokens par seconde : --";
             const eLine = block.querySelector('.rpi-energy-line');
             const eCo2 = block.querySelector('.rpi-co2-line');
             const eGpt = block.querySelector('.rpi-gpt-compare');
@@ -769,7 +773,7 @@
         }
     }
 
-    function updateTokenCounts(tokenCounts) {
+    function updateTokenCounts(tokenCounts, generationTimes) {
         if (!tokenCounts) return;
         for (const name of raspberries) {
             const block = rpiBlocks[name];
@@ -780,6 +784,15 @@
                 p.textContent = "Tokens générés (estimation) : N/A";
             } else {
                 p.textContent = `Tokens générés (estimation) : ${value}`;
+            }
+
+            const pRate = block.querySelector('.rpi-tokens-per-sec');
+            if (!pRate) continue;
+            const seconds = generationTimes ? generationTimes[name] : null;
+            if (value == null || seconds == null || seconds <= 0) {
+                pRate.textContent = "Tokens par seconde : --";
+            } else {
+                pRate.textContent = `Tokens par seconde : ${(value / seconds).toFixed(1)} tok/s`;
             }
         }
     }
@@ -1172,7 +1185,7 @@
                 }
                 gameStatusDiv.textContent = `Mesure de la température pendant l'inférence...`;
                 renderOllamaResponses(json.ollama_responses);
-                updateTokenCounts(json.token_counts);
+                updateTokenCounts(json.token_counts, json.generation_times);
                 updateEnergyCosts(json.generation_times, json.energy_costs, json.token_counts);
             }
 
@@ -1184,7 +1197,7 @@
 
                 renderOllamaResponses(json.ollama_responses);
                 updateMaxTempsFromBackend(json.actual_temperatures);
-                updateTokenCounts(json.token_counts);
+                updateTokenCounts(json.token_counts, json.generation_times);
                 updateEnergyCosts(json.generation_times, json.energy_costs, json.token_counts);
 
                 // Réactiver le bouton une fois la partie terminée

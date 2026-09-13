@@ -57,6 +57,12 @@ SERVER_HOST = "127.0.0.1"
 SERVER_PORT = "8000"
 SITE_URL = f"http://{SERVER_HOST}:{SERVER_PORT}/"
 
+# Simulateur des API Raspberry Pi (mode démo, sans matériel). Les ports
+# doivent rester cohérents avec PROFILES dans simulator/pi_simulator.py et
+# avec RASPBERRIES dans interface/dashboard/views.py.
+SIMULATOR_SCRIPT = REPO_ROOT / "simulator" / "pi_simulator.py"
+SIMULATOR_PORTS = [8001, 8002, 8003]
+
 # Niveau de zoom de la page dans Firefox (1.0 = 100 %). À ajuster si besoin.
 BROWSER_ZOOM = "0.75"
 
@@ -169,9 +175,11 @@ class ControlPanel:
     def __init__(self, root: tk.Tk):
         self.root = root
         self.server_proc: subprocess.Popen | None = None
+        self.simulator_proc: subprocess.Popen | None = None
         self.browser_proc: subprocess.Popen | None = None
         self.browser_profile_dir: str | None = None
         self._stopping = False
+        self._demo_mode_active = False  # figé au démarrage, ignore les changements de case en cours de session
 
         self._build_ui()
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
@@ -205,6 +213,15 @@ class ControlPanel:
             self.root, textvariable=self.status_var, font=("Sans", 11), fg="#b00020"
         )
         self.status_label.pack(pady=(0, 12))
+
+        self.demo_mode_var = tk.BooleanVar(value=False)
+        self.demo_checkbox = tk.Checkbutton(
+            self.root,
+            text="Mode démo — simuler les Raspberry Pi (sans matériel)",
+            variable=self.demo_mode_var,
+            font=("Sans", 10),
+        )
+        self.demo_checkbox.pack(pady=(0, 8))
 
         btn_frame = tk.Frame(self.root)
         btn_frame.pack(pady=4)
@@ -276,13 +293,26 @@ class ControlPanel:
 
     def start_server(self) -> None:
         self.start_btn.configure(state=tk.DISABLED)
+        self.demo_checkbox.configure(state=tk.DISABLED)
+        self._demo_mode_active = self.demo_mode_var.get()
         self._set_status("● Démarrage…", "#e65100")
+
+        if self._demo_mode_active:
+            self.log("Mode démo activé : lancement du simulateur de Raspberry Pi…")
+            if not self._start_simulator():
+                self.start_btn.configure(state=tk.NORMAL)
+                self.demo_checkbox.configure(state=tk.NORMAL)
+                self._set_status("● Arrêté", "#b00020")
+                return
+
         self.log("Démarrage du serveur Django…")
 
         if not VENV_PYTHON.exists():
             self.log(f"Python introuvable : {VENV_PYTHON}")
             messagebox.showerror("Erreur", f"Interpréteur Python introuvable :\n{VENV_PYTHON}")
+            self._stop_simulator()
             self.start_btn.configure(state=tk.NORMAL)
+            self.demo_checkbox.configure(state=tk.NORMAL)
             self._set_status("● Arrêté", "#b00020")
             return
 
@@ -302,10 +332,16 @@ class ControlPanel:
                     f"Le port {SERVER_PORT} est utilisé par un autre programme.\n"
                     "Fermez-le puis réessayez.",
                 )
+                self._stop_simulator()
                 self.start_btn.configure(state=tk.NORMAL)
+                self.demo_checkbox.configure(state=tk.NORMAL)
                 self._set_status("● Arrêté", "#b00020")
                 return
             self.log("Port libéré.")
+
+        env = os.environ.copy()
+        if self._demo_mode_active:
+            env["PI_SIMULATOR"] = "1"
 
         try:
             self.server_proc = subprocess.Popen(
@@ -317,6 +353,7 @@ class ControlPanel:
                     "--noreload",
                 ],
                 cwd=str(DJANGO_DIR),
+                env=env,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
@@ -326,12 +363,70 @@ class ControlPanel:
         except OSError as exc:
             self.log(f"Impossible de lancer le serveur : {exc}")
             messagebox.showerror("Erreur", f"Impossible de lancer le serveur Django :\n{exc}")
+            self._stop_simulator()
             self.start_btn.configure(state=tk.NORMAL)
+            self.demo_checkbox.configure(state=tk.NORMAL)
             self._set_status("● Arrêté", "#b00020")
             return
 
         threading.Thread(target=self._pipe_server_output, daemon=True).start()
         threading.Thread(target=self._wait_for_server_then_open_browser, daemon=True).start()
+
+    def _start_simulator(self) -> bool:
+        """Lance simulator/pi_simulator.py (mode démo). Retourne False si le
+        démarrage a échoué (log + messagebox déjà faits dans ce cas)."""
+        if not SIMULATOR_SCRIPT.exists():
+            self.log(f"Simulateur introuvable : {SIMULATOR_SCRIPT}")
+            messagebox.showerror("Erreur", f"Script du simulateur introuvable :\n{SIMULATOR_SCRIPT}")
+            return False
+
+        python_exe = str(VENV_PYTHON) if VENV_PYTHON.exists() else sys.executable
+
+        # Filet de sécurité : libère les ports du simulateur si une session
+        # précédente mal arrêtée les occupe encore.
+        for port in SIMULATOR_PORTS:
+            if _port_is_open("127.0.0.1", port):
+                self.log(f"Le port {port} (simulateur) est déjà occupé, libération…")
+                _kill_pids(_pids_listening_on_port(port))
+                time.sleep(0.2)
+
+        try:
+            self.simulator_proc = subprocess.Popen(
+                [python_exe, str(SIMULATOR_SCRIPT)],
+                cwd=str(SIMULATOR_SCRIPT.parent),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
+                start_new_session=True,
+            )
+        except OSError as exc:
+            self.log(f"Impossible de lancer le simulateur : {exc}")
+            messagebox.showerror("Erreur", f"Impossible de lancer le simulateur :\n{exc}")
+            return False
+
+        threading.Thread(target=self._pipe_simulator_output, daemon=True).start()
+
+        deadline = time.monotonic() + 5.0
+        while time.monotonic() < deadline:
+            if self.simulator_proc.poll() is not None:
+                self.log(f"Le simulateur s'est arrêté prématurément (code {self.simulator_proc.returncode}).")
+                return False
+            if all(_port_is_open("127.0.0.1", p) for p in SIMULATOR_PORTS):
+                self.log("Simulateur de Raspberry Pi prêt.")
+                return True
+            time.sleep(0.2)
+        self.log("Le simulateur met du temps à démarrer, poursuite quand même…")
+        return True
+
+    def _pipe_simulator_output(self) -> None:
+        proc = self.simulator_proc
+        if proc is None or proc.stdout is None:
+            return
+        for line in proc.stdout:
+            line = line.rstrip()
+            if line:
+                self.log(f"[simulateur] {line}")
 
     def _pipe_server_output(self) -> None:
         proc = self.server_proc
@@ -363,7 +458,9 @@ class ControlPanel:
         self.root.after(0, self._open_browser)
 
     def _reset_after_failed_start(self) -> None:
+        self._stop_simulator()
         self.start_btn.configure(state=tk.NORMAL)
+        self.demo_checkbox.configure(state=tk.NORMAL)
         self._set_status("● Arrêté", "#b00020")
         self.server_proc = None
 
@@ -457,12 +554,15 @@ class ControlPanel:
     def stop_all(self) -> None:
         if self._stopping:
             return
-        confirmed = messagebox.askyesno(
-            "Confirmer l'arrêt",
-            "Cela va arrêter le serveur, fermer le navigateur et ÉTEINDRE les 3 "
-            "Raspberry Pi.\n\nIl faudra les rallumer manuellement (bouton "
-            "physique) pour la prochaine session.\n\nContinuer ?",
-        )
+        if self._demo_mode_active:
+            message = "Cela va arrêter le serveur et le simulateur, et fermer le navigateur.\n\nContinuer ?"
+        else:
+            message = (
+                "Cela va arrêter le serveur, fermer le navigateur et ÉTEINDRE les 3 "
+                "Raspberry Pi.\n\nIl faudra les rallumer manuellement (bouton "
+                "physique) pour la prochaine session.\n\nContinuer ?"
+            )
+        confirmed = messagebox.askyesno("Confirmer l'arrêt", message)
         if not confirmed:
             return
 
@@ -476,12 +576,21 @@ class ControlPanel:
 
         self._stop_browser()
         self._stop_server()
-        self._shutdown_all_pis()
+        self._stop_simulator()
+
+        if self._demo_mode_active:
+            self.log("Mode démo : pas de Raspberry Pi physiques à éteindre.")
+        else:
+            self._shutdown_all_pis()
 
         self.log("Arrêt terminé.")
         self._set_status("● Arrêté", "#b00020")
         self._stopping = False
-        self.root.after(0, lambda: self.start_btn.configure(state=tk.NORMAL))
+        self._demo_mode_active = False
+        self.root.after(0, lambda: (
+            self.start_btn.configure(state=tk.NORMAL),
+            self.demo_checkbox.configure(state=tk.NORMAL),
+        ))
 
     def _stop_browser(self) -> None:
         if self.browser_proc is not None and self.browser_proc.poll() is None:
@@ -518,6 +627,27 @@ class ControlPanel:
                 self.log(f"Le port {SERVER_PORT} semble toujours occupé.")
             else:
                 self.log("Serveur orphelin arrêté.")
+
+    def _stop_simulator(self) -> None:
+        if self.simulator_proc is not None and self.simulator_proc.poll() is None:
+            self.log("Arrêt du simulateur…")
+            try:
+                os.killpg(os.getpgid(self.simulator_proc.pid), signal.SIGTERM)
+                self.simulator_proc.wait(timeout=STOP_TIMEOUT)
+            except (ProcessLookupError, subprocess.TimeoutExpired):
+                try:
+                    os.killpg(os.getpgid(self.simulator_proc.pid), signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+            self.log("Simulateur arrêté.")
+        self.simulator_proc = None
+
+        leftover = []
+        for port in SIMULATOR_PORTS:
+            leftover.extend(_pids_listening_on_port(port))
+        if leftover:
+            self.log(f"Processus simulateur résiduel ({leftover}), arrêt forcé…")
+            _kill_pids(leftover, timeout=STOP_TIMEOUT)
 
     @staticmethod
     def _terminate_then_kill(proc: subprocess.Popen) -> None:
@@ -581,6 +711,8 @@ class ControlPanel:
         # — seul le bouton « Arrêter tout » le fait explicitement.
         if self.server_proc is not None and self.server_proc.poll() is None:
             self._stop_server()
+        if self.simulator_proc is not None and self.simulator_proc.poll() is None:
+            self._stop_simulator()
         if self.browser_proc is not None and self.browser_proc.poll() is None:
             self._stop_browser()
         self.root.destroy()
