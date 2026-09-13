@@ -84,6 +84,84 @@ def _port_is_open(host: str, port: int, timeout: float = 0.3) -> bool:
         return False
 
 
+def _pids_listening_on_port(port: int) -> list[int]:
+    """Trouve les PID qui écoutent sur ce port TCP en lisant /proc directement
+    (aucune dépendance à des outils externes comme fuser/lsof, pas toujours
+    présents). Sert de filet de sécurité pour retrouver un serveur devenu
+    orphelin (ex. application fermée brutalement lors d'une session
+    précédente) et que cette instance ne connaît pas via self.server_proc.
+    """
+    target_hex = f"{port:04X}"
+    inodes = set()
+    for proc_net in ("/proc/net/tcp", "/proc/net/tcp6"):
+        try:
+            with open(proc_net) as f:
+                next(f, None)  # en-tête
+                for line in f:
+                    fields = line.split()
+                    if len(fields) < 10:
+                        continue
+                    local_addr, state, inode = fields[1], fields[3], fields[9]
+                    hex_port = local_addr.rsplit(":", 1)[-1]
+                    if hex_port.upper() == target_hex and state == "0A":  # 0A = LISTEN
+                        inodes.add(inode)
+        except OSError:
+            continue
+    if not inodes:
+        return []
+
+    pids = []
+    for pid_dir in Path("/proc").iterdir():
+        if not pid_dir.name.isdigit():
+            continue
+        fd_dir = pid_dir / "fd"
+        try:
+            fds = list(fd_dir.iterdir())
+        except OSError:
+            continue
+        for fd in fds:
+            try:
+                target = os.readlink(fd)
+            except OSError:
+                continue
+            if target.startswith("socket:[") and target[8:-1] in inodes:
+                pids.append(int(pid_dir.name))
+                break
+    return pids
+
+
+def _pid_alive(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def _kill_pids(pids: list[int], timeout: float = 5.0) -> None:
+    """Envoie SIGTERM puis, passé timeout, SIGKILL aux PID encore en vie."""
+    for pid in pids:
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+
+    deadline = time.monotonic() + timeout
+    remaining = set(pids)
+    while remaining and time.monotonic() < deadline:
+        remaining = {p for p in remaining if _pid_alive(p)}
+        if remaining:
+            time.sleep(0.2)
+    for pid in remaining:
+        if _pid_alive(pid):
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+
+
 class ControlPanel:
     def __init__(self, root: tk.Tk):
         self.root = root
@@ -205,6 +283,27 @@ class ControlPanel:
             self._set_status("● Arrêté", "#b00020")
             return
 
+        # Filet de sécurité : si un serveur d'une session précédente occupe
+        # encore le port (ex. application fermée brutalement, sans passer
+        # par « Arrêter tout »), on le libère avant de relancer — sinon le
+        # nouveau processus échoue silencieusement et le bouton « Arrêter »
+        # ne connaîtra jamais l'ancien serveur, qui ne s'arrêtera donc jamais.
+        if _port_is_open(SERVER_HOST, int(SERVER_PORT)):
+            self.log(f"Le port {SERVER_PORT} est déjà occupé (ancien serveur non arrêté ?), libération…")
+            _kill_pids(_pids_listening_on_port(int(SERVER_PORT)))
+            time.sleep(0.3)
+            if _port_is_open(SERVER_HOST, int(SERVER_PORT)):
+                self.log(f"Le port {SERVER_PORT} est toujours occupé par un autre programme.")
+                messagebox.showerror(
+                    "Port occupé",
+                    f"Le port {SERVER_PORT} est utilisé par un autre programme.\n"
+                    "Fermez-le puis réessayez.",
+                )
+                self.start_btn.configure(state=tk.NORMAL)
+                self._set_status("● Arrêté", "#b00020")
+                return
+            self.log("Port libéré.")
+
         try:
             self.server_proc = subprocess.Popen(
                 [
@@ -285,8 +384,21 @@ class ControlPanel:
         """Construit une commande de navigateur lancée dans un profil dédié,
         afin d'obtenir un processus séparé que l'on peut fermer nous-mêmes
         (plutôt que de se greffer sur une fenêtre de navigateur déjà ouverte).
+
+        Le dossier est créé sous le répertoire personnel plutôt que dans
+        /tmp : sur Ubuntu, Firefox est en général installé en paquet snap,
+        qui tourne dans un bac à sable avec son propre /tmp isolé — un
+        profil créé dans le /tmp de l'hôte lui est alors invisible (« profil
+        introuvable »). $HOME reste accessible au snap, à condition de ne
+        pas utiliser un dossier caché (préfixé par un point), lui aussi
+        souvent restreint par le bac à sable.
         """
-        self.browser_profile_dir = tempfile.mkdtemp(prefix="maquette_browser_")
+        parent = Path.home() / "maquette-launcher-browser-profiles"
+        try:
+            parent.mkdir(exist_ok=True)
+        except OSError:
+            parent = Path.home()
+        self.browser_profile_dir = tempfile.mkdtemp(prefix="browser-profile-", dir=str(parent))
 
         path = shutil.which("firefox")
         if path:
@@ -366,6 +478,19 @@ class ControlPanel:
                     pass
             self.log("Serveur Django arrêté.")
         self.server_proc = None
+
+        # Filet de sécurité : un serveur laissé orphelin par une session
+        # précédente (application fermée brutalement, plantée, ou deux
+        # démarrages successifs) peut encore écouter sur le port sans que
+        # cette instance en ait la main via self.server_proc.
+        leftover = _pids_listening_on_port(int(SERVER_PORT))
+        if leftover:
+            self.log(f"Processus restant sur le port {SERVER_PORT} ({leftover}), arrêt forcé…")
+            _kill_pids(leftover, timeout=STOP_TIMEOUT)
+            if _pids_listening_on_port(int(SERVER_PORT)):
+                self.log(f"Le port {SERVER_PORT} semble toujours occupé.")
+            else:
+                self.log("Serveur orphelin arrêté.")
 
     @staticmethod
     def _terminate_then_kill(proc: subprocess.Popen) -> None:
