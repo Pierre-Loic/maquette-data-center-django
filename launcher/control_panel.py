@@ -57,6 +57,9 @@ SERVER_HOST = "127.0.0.1"
 SERVER_PORT = "8000"
 SITE_URL = f"http://{SERVER_HOST}:{SERVER_PORT}/"
 
+# Niveau de zoom de la page dans Firefox (1.0 = 100 %). À ajuster si besoin.
+BROWSER_ZOOM = "0.75"
+
 # Doit rester cohérent avec RASPBERRIES dans interface/dashboard/views.py
 RASPBERRY_PIS = [
     {"name": "Rack 1 — Sans refroidissement", "host": "192.168.137.10"},
@@ -402,6 +405,7 @@ class ControlPanel:
 
         path = shutil.which("firefox")
         if path:
+            self._write_firefox_first_run_prefs(self.browser_profile_dir)
             return [
                 path,
                 "-kiosk",
@@ -424,6 +428,29 @@ class ControlPanel:
                 ]
 
         return None
+
+    @staticmethod
+    def _write_firefox_first_run_prefs(profile_dir: str) -> None:
+        """Comme un nouveau profil Firefox est créé à chaque lancement (voir
+        _build_browser_command), Firefox le traite comme une toute première
+        installation et affiche l'écran d'accueil « Bienvenue dans Firefox »
+        ainsi que la notification « définir comme navigateur par défaut ».
+        On désactive ces écrans via user.js pour un démarrage direct sur le
+        site de la maquette.
+        """
+        prefs = {
+            "browser.aboutwelcome.enabled": "false",
+            "startup.homepage_welcome_url": '""',
+            "startup.homepage_welcome_url.additional": '""',
+            "browser.startup.homepage_override.mstone": '"ignore"',
+            "browser.shell.checkDefaultBrowser": "false",
+            "datareporting.policy.dataSubmissionPolicyBypassNotification": "true",
+            # Dézoome la page (ratio de pixels CSS) puisque chaque lancement
+            # repart d'un profil vierge, sans zoom par-site déjà mémorisé.
+            "layout.css.devPixelsPerPx": f'"{BROWSER_ZOOM}"',
+        }
+        lines = [f'user_pref("{key}", {value});' for key, value in prefs.items()]
+        (Path(profile_dir) / "user.js").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
     # -- Arrêt ---------------------------------------------------------------
 
