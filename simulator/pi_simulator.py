@@ -39,26 +39,8 @@ from urllib.parse import urlparse
 
 PROFILES = [
     {
-        "name": "Sans refroidissement 🔳",
-        "port": 8001,
-        "idle_temp": 42.0,
-        "warm_rate": 0.35,       # °C/s pendant la génération
-        "cool_rate": 0.10,       # °C/s au repos
-        "max_temp": 95.0,
-        "throttle_temp": 62.0,   # au-delà : le CPU ralentit (thermal throttling)
-        "crash_temp": 75.0,      # au-delà : risque de coupure brutale
-        "crash_chance": 0.08,    # probabilité par token, une fois crash_temp dépassé
-        "tokens_per_sec": 7.0,
-        "tokens_per_sec_throttled": 2.5,
-        "cpu_load_idle": (3, 8),
-        "cpu_load_busy": (85, 100),
-        "cpu_freq_idle": 600,
-        "cpu_freq_busy": 1500,
-        "ram_base": 28,
-    },
-    {
         "name": "Refroidissement passif ♨️",
-        "port": 8002,
+        "port": 8001,
         "idle_temp": 38.0,
         "warm_rate": 0.18,
         "cool_rate": 0.14,
@@ -76,7 +58,7 @@ PROFILES = [
     },
     {
         "name": "Refroidissement actif air 🍃",
-        "port": 8003,
+        "port": 8002,
         "idle_temp": 33.0,
         "warm_rate": 0.08,
         "cool_rate": 0.22,
@@ -86,6 +68,24 @@ PROFILES = [
         "crash_chance": 0.0,
         "tokens_per_sec": 8.0,
         "tokens_per_sec_throttled": 8.0,
+        "cpu_load_idle": (3, 8),
+        "cpu_load_busy": (85, 100),
+        "cpu_freq_idle": 600,
+        "cpu_freq_busy": 1500,
+        "ram_base": 28,
+    },
+    {
+        "name": "Refroidissement actif eau 💧",
+        "port": 8003,
+        "idle_temp": 28.0,
+        "warm_rate": 0.05,
+        "cool_rate": 0.30,
+        "max_temp": 45.0,
+        "throttle_temp": None,
+        "crash_temp": None,
+        "crash_chance": 0.0,
+        "tokens_per_sec": 8.5,
+        "tokens_per_sec_throttled": 8.5,
         "cpu_load_idle": (3, 8),
         "cpu_load_busy": (85, 100),
         "cpu_freq_idle": 600,
@@ -260,7 +260,7 @@ class PiHandler(BaseHTTPRequestHandler):
                     # Simule un plantage lié à la surchauffe : la connexion est
                     # coupée sans le chunk terminal. Côté Django, `requests`
                     # lève une exception que `call_ollama` traduit en réponse
-                    # partielle ou en « 🔥🤯 Surchauffe !! ».
+                    # partielle ou en message d'erreur générique.
                     self.close_connection = True
                     try:
                         self.connection.shutdown(socket.SHUT_WR)

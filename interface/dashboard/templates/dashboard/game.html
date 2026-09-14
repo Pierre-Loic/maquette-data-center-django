@@ -483,11 +483,11 @@
                                 <div class="mb-2">
                                     <label for="modelSelect" class="form-label mb-1 small">Taille du modèle</label>
                                     <select id="modelSelect" class="form-select form-select-sm" required>
-                                        <option value="falcon3:1b" data-size="petit">🇦🇪 Falcon3:1b (Petit)</option>
-                                        <option value="deepseek-r1:1.5b" data-size="petit">🇨🇳 DeepSeek R1:1.5b (Petit)</option>
-                                        <option value="gemma4:e2b" data-size="moyen">🇺🇸 Gemma4:e2b (Moyen)</option>
-                                        <option value="qwen3.5:2b" data-size="moyen">🇨🇳 Qwen3.5:2b (Moyen)</option>
-                                        <option value="granite4.1:3b" data-size="grand">🇺🇸 Granite4.1:3b (Grand)</option>
+                                        <option value="gemma3:270m" data-size="petit">🇺🇸 Gemma3:270m (Petit)</option>
+                                        <option value="qwen3:0.6b" data-size="petit">🇨🇳 Qwen3:0.6b (Petit)</option>
+                                        <option value="falcon3:1b" data-size="moyen">🇦🇪 Falcon3:1b (Moyen)</option>
+                                        <option value="llama3.2:1b" data-size="moyen">🇺🇸 Llama3.2:1b (Moyen)</option>
+                                        <option value="deepseek-r1:1.5b" data-size="grand">🇨🇳 DeepSeek R1:1.5b (Grand)</option>
                                         <option value="ministral-3:3b" data-size="grand">🇫🇷 Ministral-3:3b (Grand)</option>
                                     </select>
                                 </div>
@@ -627,7 +627,7 @@
     ];
 
     const datasets = raspberries.map((name, idx) => {
-        const color = name.startsWith('Sans refroidissement') ? '#000000'
+        const color = name.startsWith('Refroidissement actif eau') ? '#3498db'
                     : name.startsWith('Refroidissement passif') ? '#e74c3c'
                     : COLORS[idx % COLORS.length];
         return {

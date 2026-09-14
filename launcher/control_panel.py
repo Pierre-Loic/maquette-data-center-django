@@ -68,9 +68,9 @@ BROWSER_ZOOM = "0.75"
 
 # Doit rester cohérent avec RASPBERRIES dans interface/dashboard/views.py
 RASPBERRY_PIS = [
-    {"name": "Rack 1 — Sans refroidissement", "host": "192.168.137.10"},
-    {"name": "Rack 2 — Refroidissement passif", "host": "192.168.137.11"},
-    {"name": "Rack 3 — Refroidissement actif", "host": "192.168.137.12"},
+    {"name": "Rack 1 — Refroidissement passif", "host": "192.168.137.10"},
+    {"name": "Rack 2 — Refroidissement actif air", "host": "192.168.137.11"},
+    {"name": "Rack 3 — Refroidissement actif eau", "host": "192.168.137.12"},
 ]
 # Identifiants SSH (utilisateur + mot de passe) : voir launcher/pi_credentials.py
 # (non commité, cf. .gitignore et pi_credentials.py.example). Identiques sur

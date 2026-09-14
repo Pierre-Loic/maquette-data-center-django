@@ -127,11 +127,11 @@
                             <div class="col-md-6">
                                 <label for="modelSelect" class="form-label small">Modèle utilisé</label>
                                 <select id="modelSelect" class="form-select form-select-sm">
+                                    <option value="gemma3:270m">🇺🇸 Gemma3:270m</option>
+                                    <option value="qwen3:0.6b">🇨🇳 Qwen3:0.6b</option>
                                     <option value="falcon3:1b">🇦🇪 Falcon3:1b</option>
+                                    <option value="llama3.2:1b">🇺🇸 Llama3.2:1b</option>
                                     <option value="deepseek-r1:1.5b">🇨🇳 DeepSeek R1:1.5b</option>
-                                    <option value="gemma4:e2b">🇺🇸 Gemma4:e2b</option>
-                                    <option value="qwen3.5:2b">🇨🇳 Qwen3.5:2b</option>
-                                    <option value="granite4.1:3b">🇺🇸 Granite4.1:3b</option>
                                     <option value="ministral-3:3b">🇫🇷 Ministral-3:3b</option>
                                 </select>
                             </div>
@@ -241,7 +241,7 @@
     const COLORS = ['#e74c3c', '#2ecc71', '#3498db', '#9b59b6', '#f1c40f', '#e67e22'];
 
     const datasets = raspberries.map((name, idx) => {
-        const color = name.startsWith('Sans refroidissement') ? '#000000'
+        const color = name.startsWith('Refroidissement actif eau') ? '#3498db'
                     : name.startsWith('Refroidissement passif') ? '#e74c3c'
                     : COLORS[idx % COLORS.length];
         return {

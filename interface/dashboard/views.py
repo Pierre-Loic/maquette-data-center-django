@@ -29,9 +29,9 @@ def _load_rag_contexts():
 _USE_PI_SIMULATOR = os.environ.get("PI_SIMULATOR") == "1"
 
 _RASPBERRY_HOSTS = [
-    ("Sans refroidissement 🔳", "192.168.137.10", 8001),
-    ("Refroidissement passif ♨️", "192.168.137.11", 8002),
-    ("Refroidissement actif air 🍃", "192.168.137.12", 8003),
+    ("Refroidissement passif ♨️", "192.168.137.10", 8001),
+    ("Refroidissement actif air 🍃", "192.168.137.11", 8002),
+    ("Refroidissement actif eau 💧", "192.168.137.12", 8003),
 ]
 
 RASPBERRIES = [
@@ -156,7 +156,7 @@ def call_ollama(rpi, prompt, model="falcon3:1b", on_progress=None):
         if collected:
             partial = "".join(collected)
             return name, f"⚠️ *(réponse partielle — interruption)*\n\n{partial}", estimate_tokens(partial), generation_seconds
-        return name, "🔥🤯 Surchauffe !!", 0, generation_seconds
+        return name, "⚠️ *(erreur de génération)*", 0, generation_seconds
 
 
 def fetch_metrics():
@@ -537,7 +537,7 @@ def api_game_status(request):
     rpi_mapping = {
         "Refroidissement passif ♨️": (1, "pi1"),
         "Refroidissement actif air 🍃": (2, "pi2"),
-        "Sans refroidissement 🔳": (3, "pi3"),
+        "Refroidissement actif eau 💧": (3, "pi3"),
     }
 
     # Préparer les données pour la sauvegarde
