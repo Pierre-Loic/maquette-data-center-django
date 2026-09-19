@@ -6,7 +6,10 @@ bibliothèque standard uniquement) avec deux boutons :
 - **▶ Démarrer** : lance `manage.py runserver` et ouvre un navigateur dédié
   sur `http://127.0.0.1:8000/`.
 - **⏹ Arrêter tout** : ferme le navigateur, arrête le serveur Django, puis
-  éteint (SSH + `shutdown -h now`) les 3 Raspberry Pi du rack.
+  éteint (SSH + `shutdown -h now`) les 3 Raspberry Pi du rack. L'écran de
+  confirmation propose une case **« Éteindre aussi les 3 Raspberry Pi »**
+  (cochée par défaut) : la décocher ferme uniquement le navigateur et le
+  serveur Django, en laissant les Raspberry Pi allumés.
 
 ## Fichiers
 

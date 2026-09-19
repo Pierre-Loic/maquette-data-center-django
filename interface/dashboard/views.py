@@ -80,7 +80,7 @@ def estimate_tokens(text):
     return max(1, len(text) // 4)
 
 
-def call_ollama(rpi, prompt, model="falcon3:1b", on_progress=None):
+def call_ollama(rpi, prompt, model="gemma3:270m", on_progress=None):
     """Appelle Ollama en mode streaming. Retourne les tokens partiels si timeout/erreur.
 
     Retourne un tuple (name, response, token_count, generation_seconds) où
@@ -263,7 +263,7 @@ def api_start_game(request):
         prompt = data.get("prompt", "")
         predictions = data.get("predictions", {}) or {}
         player_name = data.get("player_name", "Joueur")
-        model = data.get("model", "falcon3:1b")
+        model = data.get("model", "gemma3:270m")
 
         rpi_names = [r["name"] for r in RASPBERRIES]
 
@@ -621,7 +621,7 @@ def api_dialogue_next(request):
     """Génère la prochaine réponse dans le dialogue"""
     try:
         data = json.loads(request.body)
-        model = data.get("model", "falcon3:1b")
+        model = data.get("model", "gemma3:270m")
         model_index = data.get("model_index", 0)
         conversation_history = data.get("conversation_history", [])
 

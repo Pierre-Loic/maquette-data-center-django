@@ -127,11 +127,10 @@
                             <div class="col-md-6">
                                 <label for="modelSelect" class="form-label small">Modèle utilisé</label>
                                 <select id="modelSelect" class="form-select form-select-sm">
+                                    <option value="gemma3:270m">🇺🇸 Gemma3:270m</option>
+                                    <option value="granite4:350m">🇺🇸 Granite4:350m</option>
                                     <option value="falcon3:1b">🇦🇪 Falcon3:1b</option>
                                     <option value="deepseek-r1:1.5b">🇨🇳 DeepSeek R1:1.5b</option>
-                                    <option value="gemma4:e2b">🇺🇸 Gemma4:e2b</option>
-                                    <option value="qwen3.5:2b">🇨🇳 Qwen3.5:2b</option>
-                                    <option value="granite4.1:3b">🇺🇸 Granite4.1:3b</option>
                                     <option value="ministral-3:3b">🇫🇷 Ministral-3:3b</option>
                                 </select>
                             </div>
@@ -229,8 +228,8 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="{% static 'dashboard/vendor/chartjs/chart.umd.min.js' %}"></script>
+<script src="{% static 'dashboard/vendor/marked/marked.umd.js' %}"></script>
 <script>
     const raspberries = {{ raspberries|safe }};
 
