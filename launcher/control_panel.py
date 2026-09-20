@@ -7,7 +7,8 @@ fenêtre avec deux boutons.
 - « Démarrer » : lance le serveur Django (manage.py runserver) et ouvre
   automatiquement un navigateur sur la page du site.
 - « Arrêter »  : ferme le navigateur, arrête le serveur Django, puis éteint
-  (shutdown) les 3 Raspberry Pi du rack.
+  (shutdown) les 3 Raspberry Pi du rack — sauf si la case « Éteindre aussi
+  les 3 Raspberry Pi » de l'écran de confirmation est décochée.
 
 Ne dépend que de la bibliothèque standard de Python (Tkinter inclus), afin
 de pouvoir tourner indépendamment de l'environnement virtuel du projet
@@ -556,21 +557,94 @@ class ControlPanel:
             return
         if self._demo_mode_active:
             message = "Cela va arrêter le serveur et le simulateur, et fermer le navigateur.\n\nContinuer ?"
+            if not messagebox.askyesno("Confirmer l'arrêt", message):
+                return
+            shutdown_pis = False
         else:
-            message = (
-                "Cela va arrêter le serveur, fermer le navigateur et ÉTEINDRE les 3 "
-                "Raspberry Pi.\n\nIl faudra les rallumer manuellement (bouton "
-                "physique) pour la prochaine session.\n\nContinuer ?"
-            )
-        confirmed = messagebox.askyesno("Confirmer l'arrêt", message)
-        if not confirmed:
-            return
+            shutdown_pis = self._ask_stop_confirmation()
+            if shutdown_pis is None:
+                return
 
         self._stopping = True
         self.stop_btn.configure(state=tk.DISABLED)
-        threading.Thread(target=self._do_stop_all, daemon=True).start()
+        threading.Thread(target=self._do_stop_all, args=(shutdown_pis,), daemon=True).start()
 
-    def _do_stop_all(self) -> None:
+    def _ask_stop_confirmation(self) -> bool | None:
+        """Boîte de confirmation modale avec une case « éteindre aussi les
+        3 Raspberry Pi » (cochée par défaut). Renvoie l'état de la case si
+        l'utilisateur confirme, None s'il annule."""
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Confirmer l'arrêt")
+        dialog.transient(self.root)
+        dialog.resizable(False, False)
+
+        shutdown_var = tk.BooleanVar(value=True)
+        result: dict[str, bool | None] = {"value": None}
+
+        tk.Label(
+            dialog,
+            text="Cela va arrêter le serveur Django et fermer le navigateur.",
+            font=("Sans", 10),
+            justify=tk.LEFT,
+        ).pack(padx=20, pady=(18, 10), anchor="w")
+
+        tk.Checkbutton(
+            dialog,
+            text="Éteindre aussi les 3 Raspberry Pi",
+            variable=shutdown_var,
+            font=("Sans", 10, "bold"),
+        ).pack(padx=20, anchor="w")
+
+        warning_var = tk.StringVar()
+        tk.Label(
+            dialog,
+            textvariable=warning_var,
+            font=("Sans", 9),
+            fg="#b00020",
+            justify=tk.LEFT,
+            wraplength=380,
+        ).pack(padx=20, pady=(4, 12), anchor="w")
+
+        def _refresh_warning(*_args) -> None:
+            warning_var.set(
+                "Il faudra les rallumer manuellement (bouton physique) pour la "
+                "prochaine session."
+                if shutdown_var.get()
+                else "Les Raspberry Pi resteront allumés."
+            )
+
+        shutdown_var.trace_add("write", _refresh_warning)
+        _refresh_warning()
+
+        def _confirm() -> None:
+            result["value"] = shutdown_var.get()
+            dialog.destroy()
+
+        btn_frame = tk.Frame(dialog)
+        btn_frame.pack(pady=(0, 16))
+        confirm_btn = tk.Button(
+            btn_frame, text="Arrêter", width=12, bg="#b00020", fg="white", command=_confirm
+        )
+        confirm_btn.grid(row=0, column=0, padx=6)
+        tk.Button(btn_frame, text="Annuler", width=12, command=dialog.destroy).grid(
+            row=0, column=1, padx=6
+        )
+
+        dialog.bind("<Return>", lambda _e: _confirm())
+        dialog.bind("<Escape>", lambda _e: dialog.destroy())
+        dialog.protocol("WM_DELETE_WINDOW", dialog.destroy)
+
+        # Centre la boîte sur la fenêtre principale, puis la rend modale.
+        dialog.update_idletasks()
+        x = self.root.winfo_rootx() + (self.root.winfo_width() - dialog.winfo_width()) // 2
+        y = self.root.winfo_rooty() + (self.root.winfo_height() - dialog.winfo_height()) // 3
+        dialog.geometry(f"+{max(x, 0)}+{max(y, 0)}")
+        confirm_btn.focus_set()
+        dialog.grab_set()
+        self.root.wait_window(dialog)
+        return result["value"]
+
+    def _do_stop_all(self, shutdown_pis: bool) -> None:
         self.log("Arrêt en cours…")
         self._set_status("● Arrêt en cours…", "#e65100")
 
@@ -580,8 +654,10 @@ class ControlPanel:
 
         if self._demo_mode_active:
             self.log("Mode démo : pas de Raspberry Pi physiques à éteindre.")
-        else:
+        elif shutdown_pis:
             self._shutdown_all_pis()
+        else:
+            self.log("Raspberry Pi laissés allumés.")
 
         self.log("Arrêt terminé.")
         self._set_status("● Arrêté", "#b00020")
