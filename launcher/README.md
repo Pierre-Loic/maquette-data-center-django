@@ -1,7 +1,7 @@
 # Panneau de contrôle de la maquette
 
 Application de bureau indépendante de la plateforme Django (Tkinter,
-bibliothèque standard uniquement) avec deux boutons :
+bibliothèque standard uniquement) avec trois boutons :
 
 - **▶ Démarrer** : lance `manage.py runserver` et ouvre un navigateur dédié
   sur `http://127.0.0.1:8000/`.
@@ -10,6 +10,13 @@ bibliothèque standard uniquement) avec deux boutons :
   confirmation propose une case **« Éteindre aussi les 3 Raspberry Pi »**
   (cochée par défaut) : la décocher ferme uniquement le navigateur et le
   serveur Django, en laissant les Raspberry Pi allumés.
+- **🧹 Vider le cache des Raspberry Pi** : exécute `sync; echo 3 >
+  /proc/sys/vm/drop_caches` sur les 3 Raspberry Pi (SSH + sudo). Ollama ne
+  compte pas le cache disque comme mémoire libre : après plusieurs
+  changements de modèle, il peut refuser de charger un gros modèle (ex.
+  `ministral-3:3b`, « model requires more system memory »). Le bouton est
+  utilisable à tout moment, mais recharger un modèle juste après est plus
+  lent (le cache est vide).
 
 ## Fichiers
 
@@ -26,12 +33,12 @@ confirmer via un bandeau **« Faire confiance à ce programme »** / **« Lancer
 (ou clic droit → *Autoriser le lancement*) — c'est normal, à faire une seule
 fois.
 
-## Hypothèses / prérequis pour le bouton « Arrêter tout »
+## Hypothèses / prérequis pour les boutons SSH (« Arrêter tout », « Vider le cache »)
 
-Le bouton éteint les Raspberry Pi via SSH par mot de passe (utilisateur
+Ces boutons agissent sur les Raspberry Pi via SSH par mot de passe (utilisateur
 `miai`), en s'appuyant sur l'utilitaire système `sshpass` (déjà installé sur
 cette machine ; sinon `sudo apt install sshpass`). Le même mot de passe sert
-pour la connexion SSH et pour le `sudo shutdown` distant.
+pour la connexion SSH et pour le `sudo` distant.
 
 Les identifiants sont dans `launcher/pi_credentials.py` — **ce fichier n'est
 pas commité** (voir `.gitignore`), pour ne pas stocker de mot de passe en
@@ -39,7 +46,7 @@ clair dans l'historique Git. Un modèle est fourni dans
 `pi_credentials.py.example` : le copier en `pi_credentials.py` et renseigner
 les identifiants si ce fichier venait à manquer (ex. nouveau clone du dépôt).
 Sans ce fichier, ou sans `sshpass`, le bouton journalise l'erreur et
-n'éteint aucun Pi.
+n'agit sur aucun Pi.
 
 Si les identifiants ou les adresses IP changent, ajuster
 `pi_credentials.py` et `RASPBERRY_PIS` en tête de `control_panel.py` (les IP

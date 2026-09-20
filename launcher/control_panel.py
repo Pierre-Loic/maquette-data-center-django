@@ -2,13 +2,15 @@
 """Panneau de contrôle de la maquette « Data Center ».
 
 Application de bureau indépendante de la plateforme Django : une petite
-fenêtre avec deux boutons.
+fenêtre avec trois boutons.
 
 - « Démarrer » : lance le serveur Django (manage.py runserver) et ouvre
   automatiquement un navigateur sur la page du site.
 - « Arrêter »  : ferme le navigateur, arrête le serveur Django, puis éteint
   (shutdown) les 3 Raspberry Pi du rack — sauf si la case « Éteindre aussi
   les 3 Raspberry Pi » de l'écran de confirmation est décochée.
+- « Vider le cache » : libère le cache mémoire des 3 Raspberry Pi (SSH),
+  pour qu'Ollama accepte de charger les gros modèles.
 
 Ne dépend que de la bibliothèque standard de Python (Tkinter inclus), afin
 de pouvoir tourner indépendamment de l'environnement virtuel du projet
@@ -189,8 +191,8 @@ class ControlPanel:
 
     def _build_ui(self) -> None:
         self.root.title("Maquette Data Center — Panneau de contrôle")
-        self.root.geometry("560x420")
-        self.root.minsize(480, 360)
+        self.root.geometry("560x460")
+        self.root.minsize(480, 400)
 
         self.logo_image = self._load_logo()
         if self.logo_image is not None:
@@ -251,6 +253,14 @@ class ControlPanel:
             command=self.stop_all,
         )
         self.stop_btn.grid(row=0, column=1, padx=8)
+
+        self.clear_cache_btn = tk.Button(
+            self.root,
+            text="🧹  Vider le cache des Raspberry Pi",
+            font=("Sans", 10),
+            command=self.clear_pi_caches,
+        )
+        self.clear_cache_btn.pack(pady=(8, 0))
 
         log_label = tk.Label(self.root, text="Journal :", anchor="w")
         log_label.pack(fill="x", padx=12, pady=(16, 0))
@@ -774,6 +784,62 @@ class ControlPanel:
 
         if result.returncode == 0:
             self.log(f"{name} ({host}) : extinction demandée.")
+        else:
+            detail = (result.stderr or result.stdout or "").strip().splitlines()
+            detail = detail[-1] if detail else f"code {result.returncode}"
+            self.log(f"{name} ({host}) : échec ({detail}).")
+
+    # -- Vidage du cache mémoire des Raspberry Pi -----------------------------
+
+    def clear_pi_caches(self) -> None:
+        self.clear_cache_btn.configure(state=tk.DISABLED)
+        threading.Thread(target=self._do_clear_pi_caches, daemon=True).start()
+
+    def _do_clear_pi_caches(self) -> None:
+        try:
+            self._clear_all_pi_caches()
+        finally:
+            self.root.after(0, lambda: self.clear_cache_btn.configure(state=tk.NORMAL))
+
+    def _clear_all_pi_caches(self) -> None:
+        if not SSH_USER or not SSH_PASSWORD:
+            self.log(
+                "Identifiants SSH introuvables (launcher/pi_credentials.py manquant) : "
+                "cache non vidé."
+            )
+            return
+        sshpass_path = shutil.which("sshpass")
+        if not sshpass_path:
+            self.log("'sshpass' n'est pas installé (sudo apt install sshpass) : cache non vidé.")
+            return
+
+        self.log("Vidage du cache mémoire des Raspberry Pi…")
+        with ThreadPoolExecutor(max_workers=len(RASPBERRY_PIS) or 1) as pool:
+            list(pool.map(lambda pi: self._clear_one_pi_cache(pi, sshpass_path), RASPBERRY_PIS))
+
+    def _clear_one_pi_cache(self, pi: dict, sshpass_path: str) -> None:
+        name, host = pi["name"], pi["host"]
+        # Sans ce vidage, Ollama ne compte pas le cache disque comme mémoire
+        # libre et refuse de charger les modèles les plus gros (ex. ministral-3:3b).
+        remote_cmd = (
+            f"echo {shlex.quote(SSH_PASSWORD)} | "
+            "sudo -S -p '' sh -c 'sync; echo 3 > /proc/sys/vm/drop_caches'"
+        )
+        cmd = [
+            sshpass_path, "-p", SSH_PASSWORD,
+            "ssh", *SSH_OPTS, f"{SSH_USER}@{host}", remote_cmd,
+        ]
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        except subprocess.TimeoutExpired:
+            self.log(f"{name} ({host}) : délai dépassé, injoignable.")
+            return
+        except OSError as exc:
+            self.log(f"{name} ({host}) : erreur ssh ({exc}).")
+            return
+
+        if result.returncode == 0:
+            self.log(f"{name} ({host}) : cache vidé.")
         else:
             detail = (result.stderr or result.stdout or "").strip().splitlines()
             detail = detail[-1] if detail else f"code {result.returncode}"
