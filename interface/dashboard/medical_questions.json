@@ -1,0 +1,20 @@
+[
+  {
+    "id": "braf",
+    "category": "Thérapie ciblée",
+    "label": "Mélanome BRAF V600E : double blocage MAPK",
+    "question": "Dans un mélanome métastatique porteur de la mutation BRAF V600E, pourquoi associe-t-on un inhibiteur de MEK à un inhibiteur de BRAF plutôt que d'utiliser l'inhibiteur de BRAF seul ?"
+  },
+  {
+    "id": "irae",
+    "category": "Immunothérapie",
+    "label": "Toxicités immuno-médiées : colite grade 3",
+    "question": "Quels sont les principaux événements indésirables immuno-médiés des inhibiteurs de checkpoint immunitaire, et comment prend-on en charge une colite de grade 3 ?"
+  },
+  {
+    "id": "tmb",
+    "category": "Biomarqueurs",
+    "label": "Charge mutationnelle tumorale (TMB)",
+    "question": "Qu'est-ce que la charge mutationnelle tumorale (TMB) et dans quelle mesure permet-elle de prédire la réponse à l'immunothérapie ?"
+  }
+]

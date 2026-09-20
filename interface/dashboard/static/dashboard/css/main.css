@@ -16,3 +16,8 @@
   color: #ffffff;
   border: none;
 }
+
+/* Grands écrans : le menu reste sur une seule ligne, c'est le titre qui se raccourcit. */
+@media (min-width: 1200px) {
+  header nav { flex-shrink: 0; flex-wrap: nowrap !important; }
+}

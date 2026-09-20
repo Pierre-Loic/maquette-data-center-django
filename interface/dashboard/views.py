@@ -80,7 +80,7 @@ def estimate_tokens(text):
     return max(1, len(text) // 4)
 
 
-def call_ollama(rpi, prompt, model="gemma3:270m", on_progress=None):
+def call_ollama(rpi, prompt, model="gemma3:270m", on_progress=None, max_tokens=None, should_stop=None):
     """Appelle Ollama en mode streaming. Retourne les tokens partiels si timeout/erreur.
 
     Retourne un tuple (name, response, token_count, generation_seconds) où
@@ -90,12 +90,17 @@ def call_ollama(rpi, prompt, model="gemma3:270m", on_progress=None):
     `on_progress`, si fourni, est appelé au fil de la génération avec
     (name, texte_partiel, nombre_de_tokens_estimé) pour permettre l'affichage
     en streaming côté navigateur.
+
+    `max_tokens` (estimation) interrompt la génération au-delà de cette taille ;
+    `should_stop`, si fourni, est interrogé à chaque token et interrompt la
+    génération lorsqu'il retourne True (ex. navigateur déconnecté).
     """
     name = rpi["name"]
     url = rpi["ollama_url"]
     print(model)
     collected = []
     token_count = 0
+    char_count = 0
     started_at = time.time()
 
     def _emit_progress():
@@ -138,12 +143,16 @@ def call_ollama(rpi, prompt, model="gemma3:270m", on_progress=None):
             token = chunk.get("response", "")
             if token:
                 collected.append(token)
+                char_count += len(token)
                 _emit_progress()
+                if (max_tokens and char_count // 4 >= max_tokens) or (should_stop and should_stop()):
+                    break
 
             if chunk.get("done"):
                 token_count = chunk.get("eval_count") or estimate_tokens("".join(collected))
                 break
 
+        res.close()
         generation_seconds = time.time() - started_at
         response = "".join(collected) or "(aucune réponse)"
         if not token_count:
@@ -669,6 +678,134 @@ def api_dialogue_next(request):
             "status": "error",
             "message": str(e)
         }, status=500)
+
+
+# ==================== Comparateur médical ====================
+
+MEDICAL_QUESTIONS_PATH = os.path.join(os.path.dirname(__file__), "medical_questions.json")
+MEDICAL_MODEL = "medgemma:4b"
+MEDICAL_GENERAL_MODELS = [
+    ("gemma3:4b", "🇺🇸 Gemma3:4b (même famille que MedGemma)"),
+    ("falcon3:1b", "🇦🇪 Falcon3:1b"),
+    ("llama3.2:1b", "🇺🇸 Llama3.2:1b"),
+    ("gemma3:270m", "🇺🇸 Gemma3:270m"),
+]
+# Un Raspberry Pi par modèle : deux modèles ne tiennent pas ensemble en RAM.
+MEDICAL_RPI_INDEX = {"general": 0, "specialist": 1}
+MEDICAL_MAX_TOKENS = 400
+MEDICAL_MAX_QUESTION_CHARS = 1000
+MEDICAL_PROMPT_TEMPLATE = (
+    "Tu es un assistant qui répond à des professionnels de santé (oncologues). "
+    "Réponds en français, de façon précise, structurée et concise (150 mots "
+    "maximum). Si tu n'es pas certain d'un point, dis-le.\n\n"
+    "Question : {question}"
+)
+
+
+def _load_medical_questions():
+    try:
+        with open(MEDICAL_QUESTIONS_PATH, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+
+class MedicalView(TemplateView):
+    """Comparaison d'un modèle généraliste et d'un modèle spécialisé en médecine."""
+    template_name = "dashboard/medical.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["questions"] = _load_medical_questions()
+        context["general_models"] = MEDICAL_GENERAL_MODELS
+        context["specialist_model"] = MEDICAL_MODEL
+        context["general_rpi"] = RASPBERRIES[MEDICAL_RPI_INDEX["general"]]["name"]
+        context["specialist_rpi"] = RASPBERRIES[MEDICAL_RPI_INDEX["specialist"]]["name"]
+        context["max_tokens"] = MEDICAL_MAX_TOKENS
+        return context
+
+
+@require_http_methods(["GET"])
+def api_medical_stream(request):
+    """Flux SSE : la même question est posée en parallèle au modèle généraliste
+    choisi et au modèle médical, chacun sur son Raspberry Pi. Indépendant de
+    l'état du jeu (current_game)."""
+    question = request.GET.get("question", "").strip()
+    general_model = request.GET.get("general_model", MEDICAL_GENERAL_MODELS[0][0])
+
+    if not question or len(question) > MEDICAL_MAX_QUESTION_CHARS:
+        return JsonResponse({"status": "error", "message": "Question vide ou trop longue."}, status=400)
+    if general_model not in dict(MEDICAL_GENERAL_MODELS):
+        return JsonResponse({"status": "error", "message": "Modèle généraliste inconnu."}, status=400)
+
+    prompt = MEDICAL_PROMPT_TEMPLATE.format(question=question)
+    sides = {
+        "general": (RASPBERRIES[MEDICAL_RPI_INDEX["general"]], general_model),
+        "specialist": (RASPBERRIES[MEDICAL_RPI_INDEX["specialist"]], MEDICAL_MODEL),
+    }
+    event_q = queue.Queue()
+    stop = threading.Event()
+
+    def _run(side, rpi, model):
+        last_emit = 0.0
+
+        def on_progress(_name, partial, token_est):
+            nonlocal last_emit
+            now = time.time()
+            if now - last_emit < 0.05:
+                return
+            last_emit = now
+            event_q.put({"type": "token", "side": side, "text": partial, "tokens": token_est})
+
+        _, response, tokens, seconds = call_ollama(
+            rpi, prompt, model,
+            on_progress=on_progress,
+            max_tokens=MEDICAL_MAX_TOKENS,
+            should_stop=stop.is_set,
+        )
+        failed = tokens == 0
+        event_q.put({
+            "type": "done",
+            "side": side,
+            "text": "" if failed else response,
+            "tokens": tokens,
+            "seconds": round(seconds, 1),
+            "error": failed,
+            "truncated": tokens >= MEDICAL_MAX_TOKENS,
+        })
+
+    def event_stream():
+        try:
+            yield _sse({
+                "type": "start",
+                "sides": {
+                    side: {"rpi": rpi["name"], "model": model}
+                    for side, (rpi, model) in sides.items()
+                },
+            })
+            for side, (rpi, model) in sides.items():
+                threading.Thread(target=_run, args=(side, rpi, model), daemon=True).start()
+
+            pending = set(sides)
+            while pending:
+                try:
+                    item = event_q.get(timeout=15)
+                except queue.Empty:
+                    yield ": keepalive\n\n"
+                    continue
+                yield _sse(item)
+                if item["type"] == "done":
+                    pending.discard(item["side"])
+            yield _sse({"type": "all_done"})
+        finally:
+            # Navigateur fermé/rechargé : arrête les générations en cours pour
+            # libérer les Raspberry Pi.
+            stop.set()
+
+    response = StreamingHttpResponse(event_stream(), content_type="text/event-stream")
+    response["Cache-Control"] = "no-cache"
+    response["X-Accel-Buffering"] = "no"
+    return response
 
 
 # ==================== Puissance instantanée ====================

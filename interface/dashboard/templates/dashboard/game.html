@@ -262,6 +262,17 @@
         border-color: #f8a07a !important;
     }
 
+    /* Lien vers la page IA médicale */
+    #medicalLink {
+        border-color: var(--miai-blue);
+        color: var(--miai-blue);
+        font-weight: 600;
+    }
+    #medicalLink:hover {
+        background: var(--miai-blue);
+        color: #fff;
+    }
+
     /* Bouton puissance */
     #powerToggle {
         border-color: var(--miai-orange) !important;
@@ -549,6 +560,10 @@
                             </div>
 
                         </form>
+
+                        <a id="medicalLink" href="{% url 'medical' %}" class="btn btn-outline-primary w-100 mt-2">
+                            🩺 Découvrir l'IA médicale
+                        </a>
 
                         <div class="mt-3 pt-3 border-top">
 

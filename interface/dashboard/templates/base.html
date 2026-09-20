@@ -17,7 +17,7 @@
 {% block header %}
 <!-- HEADER -->
 <header class="py-2" style="background-color: var(--miai-blue, #f00);">
-  <div class="container d-flex align-items-center gap-3">
+  <div class="container-fluid px-4 d-flex align-items-center gap-3">
 
     <!-- Logo -->
     <a href="/" class="d-inline-flex align-items-center text-decoration-none">
@@ -35,6 +35,7 @@
       <a class="nav-link text-white px-2 py-1" href="{% url 'game' %}">Jeu températures</a>
       <a class="nav-link text-white px-2 py-1" href="{% url 'classement' %}">Classement du jeu</a>
       <a class="nav-link text-white px-2 py-1" href="{% url 'dialogue' %}">Dialogue IA</a>
+      <a class="nav-link text-white px-2 py-1" href="{% url 'medical' %}">IA médicale</a>
     </nav>
 
   </div>
