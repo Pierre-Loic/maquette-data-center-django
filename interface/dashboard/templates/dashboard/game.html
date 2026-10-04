@@ -81,11 +81,12 @@
         margin-bottom: 0.25rem;
     }
 
-    .rpi-token-count {
+    .rpi-token-count,
+    .rpi-tokens-per-sec {
         font-size: 0.9rem;
         font-style: italic;
         margin-top: 0;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.25rem;
     }
 
     .rpi-block.card {
@@ -313,19 +314,23 @@
     /* Étape 2 : bandeau 3 colonnes + réponses */
     .step-2 #colChart  { width: 100% !important; max-width: 100% !important; flex: 0 0 100% !important; }
     .step-2 #colForm   { width: 0 !important; max-width: 0 !important; flex: 0 0 0 !important; padding: 0 !important; }
-    .step-2 #topRow    { height: 32vh; flex-shrink: 0; }
+    .step-2 #topRow    { height: 24vh; flex-shrink: 0; }
     .step-2 #chartCol  { flex: 0 0 34% !important; min-width: 0; }
     .step-2 #tempsCol  { display: flex !important; flex: 0 0 33% !important; }
     .step-2 #summaryCol{ display: flex !important; flex: 0 0 33% !important; }
-    .step-2 .rpi-blocks-scroll { flex: 1 !important; display: flex !important; }
+    .step-2 .rpi-blocks-scroll { flex: 1 !important; display: flex !important; min-height: 0; }
     /* Bloc réponse à taille fixe + scroll vertical, laisse la place au coût énergétique dessous */
     .step-2 .rpi-response {
         flex: 0 0 auto !important;
-        height: 220px !important;
-        max-height: 38vh !important;
+        height: 140px !important;
+        max-height: 18vh !important;
         overflow-y: auto !important;
     }
     .step-2 .rpi-energy-cost { flex: 0 0 auto !important; }
+    /* Laisse défiler le bas des blocs au-delà du sélecteur d'étapes flottant */
+    .step-2 .rpi-blocks-scroll { padding-bottom: 3.5rem; }
+    /* Gain de hauteur en vue Réponses : le titre « Réponse du modèle » est implicite */
+    .step-2 .rpi-block h4 { display: none; }
 
     /* ---- Panneaux bandeau step-2 ---- */
     #tempsCol, #summaryCol {
@@ -395,9 +400,406 @@
         border-color: var(--miai-blue);
         background: var(--miai-blue-light);
     }
+
+    /* ================================================================
+       SAVEURS SAVANTES : énergie de la réponse convertie en aliments
+    ================================================================ */
+
+    /* ---- Bloc simplifié (étape 1, au-dessus des courbes) ---- */
+    #foodExplainer {
+        background: var(--miai-orange-light);
+        border: 1px solid var(--miai-orange-border);
+        border-radius: 0.6rem;
+        padding: 0.8rem 1rem;
+        margin-bottom: 0.8rem;
+        flex-shrink: 0;
+    }
+    .step-2 #foodExplainer { display: none; }
+
+    #foodExplainer h2 {
+        color: var(--miai-orange);
+        font-weight: 800;
+        font-size: 1.7rem;
+        margin-bottom: 0.7rem;
+        text-align: center;
+    }
+
+    .food-steps {
+        display: flex;
+        align-items: stretch;
+        gap: 0.4rem;
+    }
+
+    .food-step {
+        flex: 1 1 0;
+        min-width: 0;
+        background: #fff;
+        border: 1px solid var(--miai-blue-border);
+        border-top: 4px solid var(--miai-blue);
+        border-radius: 0.5rem;
+        padding: 0.5rem 0.4rem;
+        line-height: 1.25;
+        text-align: center;
+    }
+    .food-step-icon  { font-size: 3rem; line-height: 1.1; }
+    .food-step-title { font-weight: 700; color: var(--miai-blue); font-size: 1.3rem; }
+    .food-step-value { font-weight: 800; color: var(--miai-orange); font-size: 1.7rem; }
+    .food-step-loss  { color: #c0392b; font-size: 1.1rem; }
+
+    .food-step-arrow {
+        flex: 0 0 auto;
+        align-self: center;
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: var(--miai-orange);
+    }
+
+    .food-summary {
+        margin-top: 0.7rem;
+        text-align: center;
+        font-size: 1.45rem;
+    }
+    .food-summary strong { color: var(--miai-orange); font-size: 1.8rem; }
+    .food-more {
+        text-align: center;
+        font-size: 1rem;
+        color: #6c757d;
+    }
+
+    /* ---- Onglet ⓪ Explications (calculs détaillés + sources) ---- */
+    #explainView {
+        height: 100vh;
+        overflow: hidden;
+        padding: 1rem 1.5rem 5rem;   /* bas : place du sélecteur d'étapes flottant */
+        font-size: 1.1rem;
+        line-height: 1.5;
+    }
+    #explainView:not(.d-none) { display: flex; }
+    .explain-inner {
+        width: 100%;
+        max-width: 1500px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    /* Carrousel : une partie par diapositive, défilement interne si besoin */
+    .explain-nav {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 0.4rem;
+        flex-wrap: wrap;
+        margin-bottom: 0.6rem;
+        flex-shrink: 0;
+    }
+    .explain-tab, .explain-arrow {
+        border: 2px solid var(--miai-orange-border);
+        background: #fff;
+        color: var(--miai-orange);
+        border-radius: 1.5rem;
+        padding: 0.3rem 1rem;
+        font-weight: 600;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .explain-arrow { font-size: 1.4rem; line-height: 1; padding: 0.15rem 0.9rem 0.35rem; }
+    .explain-tab.active { background: var(--miai-orange); border-color: var(--miai-orange); color: #fff; }
+    .explain-tab:hover:not(.active), .explain-arrow:hover { background: var(--miai-orange-light); border-color: var(--miai-orange); }
+    #explainCarousel { flex: 1 1 auto; min-height: 0; }
+    #explainCarousel .carousel-inner { height: 100%; }
+    #explainCarousel .carousel-item { height: 100%; overflow-y: auto; padding: 0 0.2rem; }
+    #explainCarousel .carousel-item > h2:first-child { margin-top: 0; }
+    .explain-logos {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 3rem;
+        margin-bottom: 0.5rem;
+    }
+    .explain-logos img { max-height: 90px; max-width: 40%; }
+    #explainView h1 {
+        color: var(--miai-orange);
+        font-weight: 800;
+        text-align: center;
+        font-size: 2.3rem;
+        margin-bottom: 0.3rem;
+    }
+    .explain-lead {
+        text-align: center;
+        font-size: 1.25rem;
+        color: #495057;
+        margin-bottom: 0.8rem;
+    }
+    #explainView h2 {
+        color: var(--miai-blue);
+        font-weight: 700;
+        font-size: 1.5rem;
+        margin: 1.4rem 0 0.7rem;
+        padding-bottom: 0.2rem;
+        border-bottom: 2px solid var(--miai-blue-border);
+    }
+    .explain-section {
+        background: #fff;
+        border: 1px solid var(--miai-blue-border);
+        border-top: 3px solid var(--miai-blue);
+        border-radius: 0.5rem;
+        padding: 1rem 1.2rem;
+    }
+    .explain-cards {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr;
+        gap: 0.5rem;
+    }
+    .explain-arrow-step {
+        align-self: center;
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--miai-orange);
+    }
+    .explain-card {
+        background: #fff;
+        border: 1px solid var(--miai-blue-border);
+        border-top: 4px solid var(--miai-orange);
+        border-radius: 0.5rem;
+        padding: 0.8rem 1rem;
+    }
+    .explain-card-head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; }
+    .explain-card-head .icon { font-size: 2.2rem; white-space: nowrap; }
+    .explain-card-head .title { font-weight: 700; color: var(--miai-blue); font-size: 1.2rem; line-height: 1.2; }
+    .explain-formula {
+        display: block;
+        background: var(--miai-blue-light);
+        color: var(--miai-blue);
+        border-radius: 0.35rem;
+        padding: 0.35rem 0.6rem;
+        margin: 0.4rem 0;
+        font-weight: 700;
+        font-size: 1.05rem;
+    }
+    .explain-steps { margin: 0; padding-left: 1.4rem; }
+    .explain-steps li { margin-bottom: 0.3rem; }
+    .explain-steps b { color: var(--miai-orange); }
+    #explainView table { font-size: 1.05rem; margin-bottom: 0; }
+    #explainView th { color: var(--miai-blue); }
+    #explainView td.text-end { white-space: nowrap; }
+    .ref { color: var(--miai-blue); font-weight: 600; font-size: 0.85em; vertical-align: super; }
+    .explain-sources li { margin-bottom: 0.35rem; font-size: 1rem; }
+
+    /* ---- Équivalents aliments (étape 2, sous chaque réponse) ---- */
+    .rpi-energy-cost {
+        background: #f1f3f5;
+        font-size: 0.95rem;
+        line-height: 1.35;
+        flex: 0 0 auto;
+    }
+    .energy-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.4rem;
+    }
+    .energy-col {
+        background: #fff;
+        border-radius: 0.35rem;
+        padding: 0.3rem 0.45rem;
+        border-left: 3px solid var(--miai-blue);
+    }
+    .energy-col.energy-col-gpt { border-left-color: #6c757d; }
+    .energy-col-title { font-weight: 700; font-size: 0.85rem; color: var(--miai-blue); }
+    .energy-col-gpt .energy-col-title { color: #495057; }
+    .food-icons { font-size: 1.35rem; line-height: 1.2; word-break: break-all; }
+    .food-count { font-weight: 700; font-size: 1.05rem; color: var(--miai-orange); }
+    .food-detail { font-size: 0.82rem; color: #6c757d; }
+    .food-chain {
+        margin-top: 0.35rem;
+        padding-top: 0.3rem;
+        border-top: 1px dashed #ced4da;
+        font-size: 0.82rem;
+        color: #495057;
+    }
+    .food-chain .chain-loss { color: #c0392b; }
+
+    /* ---- Impact sur un an (étape 2) ---- */
+    .rpi-yearly {
+        background: var(--miai-orange-light);
+        border: 1px solid var(--miai-orange-border);
+        font-size: 0.95rem;
+        line-height: 1.35;
+        flex: 0 0 auto;
+    }
+    .yearly-title {
+        font-weight: 700;
+        font-size: 0.9rem;
+        color: var(--miai-orange);
+        margin-bottom: 0.3rem;
+    }
 </style>
 
 <div class="dashboard">
+
+    <!-- ======================= ⓪ EXPLICATIONS ======================= -->
+    <!-- Valeurs [data-calc] et tableaux remplis en JS à partir des constantes
+         (FOOD_*, FOODS, POWER_WATTS, GPT_WH_PER_100_TOKENS, CO2_FACTOR_KG_PER_KWH). -->
+    <div id="explainView" class="d-none">
+        <div class="explain-inner">
+            <div class="explain-logos">
+                <img src="{% static 'dashboard/images/miai.png' %}" alt="Logo MIAI">
+                <img src="{% static 'dashboard/images/FdS.svg' %}" alt="Logo Fête de la science">
+            </div>
+            <h1>🍽️ Saveurs savantes : de l'assiette aux tokens</h1>
+            <p class="explain-lead">
+                Et si l'électricité qui fait parler l'IA venait de nos muscles&nbsp;?
+                On suit l'énergie pas à pas, de l'aliment dans l'assiette jusqu'aux tokens générés par l'IA.
+            </p>
+
+            <div class="explain-nav">
+                <button type="button" class="explain-arrow" data-bs-target="#explainCarousel" data-bs-slide="prev" aria-label="Précédent">‹</button>
+                <button type="button" class="explain-tab active" data-bs-target="#explainCarousel" data-bs-slide-to="0" aria-current="true">① Les 4 étapes</button>
+                <button type="button" class="explain-tab" data-bs-target="#explainCarousel" data-bs-slide-to="1">② Exemple</button>
+                <button type="button" class="explain-tab" data-bs-target="#explainCarousel" data-bs-slide-to="2">③ Aliments</button>
+                <button type="button" class="explain-tab" data-bs-target="#explainCarousel" data-bs-slide-to="3">④ Valeurs</button>
+                <button type="button" class="explain-tab" data-bs-target="#explainCarousel" data-bs-slide-to="4">⑤ Limites</button>
+                <button type="button" class="explain-tab" data-bs-target="#explainCarousel" data-bs-slide-to="5">📚 Sources</button>
+                <button type="button" class="explain-arrow" data-bs-target="#explainCarousel" data-bs-slide="next" aria-label="Suivant">›</button>
+            </div>
+
+            <!-- Une diapositive par partie ; défilement manuel (boutons, flèches du clavier) -->
+            <div id="explainCarousel" class="carousel slide" data-bs-interval="false" data-bs-keyboard="false" data-bs-touch="true">
+                <div class="carousel-inner">
+                    <div class="carousel-item active">
+                    <h2>1. Les 4 étapes du calcul</h2>
+                    <div class="explain-cards">
+                        <div class="explain-card">
+                            <div class="explain-card-head"><span class="icon">🍌🫐</span><span class="title">① Aliment</span></div>
+                            <div>L'énergie chimique de l'aliment est indiquée en kilocalories sur les étiquettes nutritionnelles. On la convertit en wattheures.</div>
+                            <span class="explain-formula">E<sub>aliment</sub> (Wh) = kcal × <span data-calc="wh_per_kcal"></span></span>
+                            <div class="small">1 kcal = 4&nbsp;184 J = <span data-calc="wh_per_kcal"></span> Wh<span class="ref">[2]</span> ; teneurs en énergie : table Ciqual<span class="ref">[1]</span>.</div>
+                        </div>
+                        <div class="explain-arrow-step">➜</div>
+                        <div class="explain-card">
+                            <div class="explain-card-head"><span class="icon">💪🥵</span><span class="title">② Muscles</span></div>
+                            <div>Nos muscles transforment l'énergie des aliments en mouvement avec un rendement d'environ <b><span data-calc="eff_muscle"></span></b>&nbsp;: le reste devient chaleur (on transpire&nbsp;!).</div>
+                            <span class="explain-formula">E<sub>méca</sub> = E<sub>aliment</sub> × <span data-calc="eff_muscle_dec"></span></span>
+                            <div class="small">Rendement brut mesuré en cyclisme : 18 à 25 %<span class="ref">[3]</span>.</div>
+                        </div>
+                        <div class="explain-arrow-step">➜</div>
+                        <div class="explain-card">
+                            <div class="explain-card-head"><span class="icon">🚲⚡</span><span class="title">③ Vélo-génératrice</span></div>
+                            <div>Chaîne, roue et dynamo perdent de l'énergie en frottements et en chaleur&nbsp;: seuls <b><span data-calc="eff_generator"></span></b> du travail des jambes deviennent électricité.</div>
+                            <span class="explain-formula">E<sub>élec</sub> = E<sub>méca</sub> × <span data-calc="eff_generator_dec"></span></span>
+                            <div class="small">Transmission par chaîne ≈ 95–98 %<span class="ref">[4]</span>, génératrice et électronique ≈ 75 %.</div>
+                        </div>
+                        <div class="explain-arrow-step">➜</div>
+                        <div class="explain-card">
+                            <div class="explain-card-head"><span class="icon">🍓📝</span><span class="title">④ Tokens générés par l'IA</span></div>
+                            <div>Le Raspberry Pi consomme une puissance <i>P</i> ≈ <span data-calc="power"></span> pendant toute la durée <i>t</i> de génération de la réponse.</div>
+                            <span class="explain-formula">t = E<sub>élec</sub> ÷ P</span>
+                            <div class="small">ChatGPT : <span data-calc="gpt_wh"></span> Wh pour 100 tokens générés.</div>
+                        </div>
+                    </div>
+                    <div class="explain-section mt-3 text-center fs-5">
+                        Au total, <b>seulement <span data-calc="eff_total"></span></b> de l'énergie de l'aliment devient électricité :
+                        <span class="explain-formula d-inline-block">E<sub>élec</sub> = kcal × <span data-calc="wh_per_kcal"></span> × <span data-calc="eff_muscle_dec"></span> × <span data-calc="eff_generator_dec"></span></span>
+                        <div class="small text-muted mt-1">
+                            Pour chaque réponse, on fait le chemin inverse : on part de la durée de génération mesurée pour retrouver les kilocalories à manger (voir ② Exemple).
+                        </div>
+                    </div>
+                    </div>
+                    <div class="carousel-item">
+                    <h2>2. Exemple pas à pas : <span data-calc="ex_seconds"></span> s de génération sur un Raspberry Pi</h2>
+                    <div class="explain-section">
+                        <ol class="explain-steps">
+                            <li>Électricité : <span data-calc="power"></span> × <span data-calc="ex_seconds"></span> s = <b><span data-calc="ex_elec"></span> Wh</b></li>
+                            <li>Travail des jambes : <span data-calc="ex_elec"></span> ÷ <span data-calc="eff_generator_dec"></span> = <b><span data-calc="ex_mech"></span> Wh</b>
+                                (soit <span data-calc="ex_pedal"></span> de pédalage à <span data-calc="cyclist"></span>)</li>
+                            <li>Énergie à manger : <span data-calc="ex_mech"></span> ÷ <span data-calc="eff_muscle_dec"></span> = <b><span data-calc="ex_food"></span> Wh</b>,
+                                dont <span data-calc="ex_heat"></span> Wh perdus en chaleur</li>
+                            <li>En kilocalories : <span data-calc="ex_food"></span> ÷ <span data-calc="wh_per_kcal"></span> = <b><span data-calc="ex_kcal"></span> kcal</b>
+                                ≈ <b><span data-calc="ex_equiv"></span></b></li>
+                            <li>Sur un an (<span data-calc="year_per_day"></span> prompts/jour × <span data-calc="year_days"></span> jours = <span data-calc="year_prompts"></span> prompts) :
+                                <b><span data-calc="ex_year_kcal"></span> kcal ≈ <span data-calc="ex_year_equiv"></span></b></li>
+                        </ol>
+                    </div>
+                    </div>
+                    <div class="carousel-item">
+                    <h2>3. Les aliments de référence</h2>
+                    <div class="explain-section">
+                        <table class="table table-sm align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Aliment</th>
+                                    <th class="text-end">Masse (unité)</th>
+                                    <th class="text-end">Énergie pour 100 g</th>
+                                    <th class="text-end">Énergie (unité)</th>
+                                    <th class="text-end">Électricité produite à vélo</th>
+                                    <th class="text-end">Raspberry Pi alimenté pendant</th>
+                                </tr>
+                            </thead>
+                            <tbody id="explainFoodTable"></tbody>
+                        </table>
+                        <div class="small text-muted mt-2">
+                            Teneurs moyennes arrondies d'après la table Ciqual<span class="ref">[1]</span> ; masses unitaires = ordres de grandeur.
+                            La journée de repas correspond à l'apport de référence d'un adulte<span class="ref">[7]</span>.
+                        </div>
+                    </div>
+                    </div>
+                    <div class="carousel-item">
+                    <h2>4. Valeurs utilisées et sources</h2>
+                    <div class="explain-section">
+                        <table class="table table-sm align-middle">
+                            <thead><tr><th>Paramètre</th><th class="text-end">Valeur</th><th>Origine</th></tr></thead>
+                            <tbody>
+                                <tr><td>Puissance d'un Raspberry Pi pendant la génération</td><td class="text-end"><span data-calc="power"></span></td>
+                                    <td>Hypothèse de la maquette (Raspberry Pi 5 en pleine charge ; alimentation officielle limitée à 27 W<span class="ref">[5]</span>)</td></tr>
+                                <tr><td>Énergie d'inférence ChatGPT</td><td class="text-end"><span data-calc="gpt_wh"></span> Wh / 100 tokens</td>
+                                    <td>Estimation retenue pour la maquette<span class="ref">[8]</span></td></tr>
+                                <tr><td>Facteur d'émission de l'électricité</td><td class="text-end"><span data-calc="co2_factor"></span> gCO₂eq/kWh</td>
+                                    <td>Mix électrique français, base de données de l'ADEME<span class="ref">[6]</span></td></tr>
+                                <tr><td>Rendement vélo-génératrice</td><td class="text-end"><span data-calc="eff_generator"></span></td>
+                                    <td>Chaîne ≈ 95–98 %<span class="ref">[4]</span> × génératrice et électronique ≈ 75 % (hypothèse)</td></tr>
+                                <tr><td>Rendement musculaire (cyclisme)</td><td class="text-end"><span data-calc="eff_muscle"></span></td>
+                                    <td>Rendement brut 18–25 %<span class="ref">[3]</span></td></tr>
+                                <tr><td>Conversion d'unités</td><td class="text-end">1 kcal = 4&nbsp;184 J</td>
+                                    <td>Calorie thermochimique<span class="ref">[2]</span></td></tr>
+                                <tr><td>Puissance d'un cycliste tranquille</td><td class="text-end"><span data-calc="cyclist"></span></td>
+                                    <td>Hypothèse : pédalage de loisir (≈ 50 à 100 W)</td></tr>
+                                <tr><td>Usage annuel</td><td class="text-end"><span data-calc="year_per_day"></span> prompts × <span data-calc="year_days"></span> j</td>
+                                    <td>Hypothèse : usage quotidien intensif</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    </div>
+                    <div class="carousel-item">
+                    <h2>5. Limites de l'exercice</h2>
+                    <div class="explain-section">
+                        <ul class="mb-0">
+                            <li>Ce sont des <b>ordres de grandeur</b>, pas des mesures exactes : la puissance du Raspberry Pi est supposée constante et le nombre de tokens est parfois estimé (≈ 4 caractères par token).</li>
+                            <li>L'énergie pour <b>produire, transporter et cuisiner</b> les aliments n'est pas comptée.</li>
+                            <li>On ne compte que l'<b>utilisation</b> du modèle : l'entraînement et la fabrication du matériel (Raspberry Pi, serveurs) ne sont pas inclus.</li>
+                            <li>ChatGPT tourne dans des centres de données alimentés par le réseau électrique : le vélo est une façon imagée de comparer les quantités d'énergie.</li>
+                        </ul>
+                    </div>
+                    </div>
+                    <div class="carousel-item">
+                    <h2>Sources</h2>
+                    <ol class="explain-sources">
+                        <li>ANSES — Table de composition nutritionnelle des aliments Ciqual, ciqual.anses.fr</li>
+                        <li>ISO 80000-5:2019, Grandeurs et unités — Partie 5 : Thermodynamique (calorie thermochimique : 1 cal = 4,184 J).</li>
+                        <li>Ettema G., Lorås H. W. (2009). Efficiency in cycling: a review. <i>European Journal of Applied Physiology</i>, 106(1), 1–14.</li>
+                        <li>Spicer J. B. et al. (2001). Effects of frictional loss on bicycle chain drive efficiency. <i>Journal of Mechanical Design</i>, 123(4), 598–605.</li>
+                        <li>Raspberry Pi Ltd — Raspberry Pi 5 Product Brief (alimentation USB-C 5 V / 5 A), raspberrypi.com</li>
+                        <li>ADEME — Base Empreinte®, facteurs d'émission de l'électricité en France, base-empreinte.ademe.fr</li>
+                        <li>Règlement (UE) n° 1169/2011 (INCO), annexe XIII : apport de référence pour un adulte de 8&nbsp;400 kJ / 2&nbsp;000 kcal par jour.</li>
+                        <li>Estimations de l'énergie d'inférence des LLM, par exemple : Epoch AI (2025), « How much energy does ChatGPT use? » ; Jegham N. et al. (2025), « How Hungry is AI? Benchmarking Energy, Water, and Carbon Footprint of LLM Inference », arXiv:2505.09598.</li>
+                    </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="dashboard-main container-fluid py-2">
         <div class="row h-100 g-3">
 
@@ -405,6 +807,46 @@
             <div id="colChart" class="col-lg-9 d-flex">
                 <div class="card card-fullheight shadow-sm w-100">
                     <div class="card-body d-flex flex-column">
+
+                        <!-- Saveurs savantes : résumé visuel (étape 1 seulement). Les valeurs
+                             [data-calc] sont calculées en JS à partir des constantes FOOD_* ;
+                             le détail des calculs est dans l'onglet ⓪ Explications. -->
+                        <div id="foodExplainer">
+                            <h2>🍽️ Saveurs savantes : combien faut-il manger pour faire parler une IA&nbsp;?</h2>
+                            <div class="food-steps">
+                                <div class="food-step">
+                                    <div class="food-step-icon">🍌</div>
+                                    <div class="food-step-title">1 banane</div>
+                                    <div class="food-step-value"><span data-calc="banana_kcal"></span> kcal</div>
+                                </div>
+                                <div class="food-step-arrow">➜</div>
+                                <div class="food-step">
+                                    <div class="food-step-icon">💪</div>
+                                    <div class="food-step-title">Muscles</div>
+                                    <div class="food-step-value"><span data-calc="eff_muscle"></span> utile</div>
+                                    <div class="food-step-loss">🥵 <span data-calc="loss_muscle"></span> en chaleur</div>
+                                </div>
+                                <div class="food-step-arrow">➜</div>
+                                <div class="food-step">
+                                    <div class="food-step-icon">🚲⚡</div>
+                                    <div class="food-step-title">Vélo-génératrice</div>
+                                    <div class="food-step-value"><span data-calc="eff_generator"></span> utile</div>
+                                    <div class="food-step-loss">⚙️ <span data-calc="loss_generator"></span> en frottements</div>
+                                </div>
+                                <div class="food-step-arrow">➜</div>
+                                <div class="food-step">
+                                    <div class="food-step-icon">🍓📝</div>
+                                    <div class="food-step-title">IA sur Raspberry Pi</div>
+                                    <div class="food-step-value"><span data-calc="banana_pi_time"></span></div>
+                                    <div class="food-step-loss text-muted">de génération de texte</div>
+                                </div>
+                            </div>
+                            <div class="food-summary">
+                                Seulement <strong><span data-calc="eff_total"></span></strong> de l'énergie de la banane devient de l'électricité&nbsp;⚡
+                            </div>
+                            <div class="food-more">👉 Calculs détaillés et sources : onglet ⓪ Explications</div>
+                        </div>
+
                         <h2 class="h5 card-title text-center mb-2">Températures en temps réel</h2>
 
                         <!-- Bandeau supérieur : graphique + panneaux step-2 -->
@@ -468,8 +910,9 @@
             <div id="colForm" class="col-lg-3 d-flex">
                 <div class="card card-fullheight shadow-sm w-100">
                     <div class="card-body card-body-scroll">
-                        <div class="text-center mb-3">
-                            <img src="{% static 'dashboard/images/miai.png' %}" alt="Logo MIAI" class="img-fluid" style="max-height: 120px;">
+                        <div class="d-flex align-items-center justify-content-center gap-3 mb-3">
+                            <img src="{% static 'dashboard/images/miai.png' %}" alt="Logo MIAI" class="img-fluid" style="max-height: 100px; min-width: 0;">
+                            <img src="{% static 'dashboard/images/FdS.svg' %}" alt="Logo Fête de la science" class="img-fluid" style="max-height: 100px; min-width: 0;">
                         </div>
 
                         <form id="gameForm" novalidate>
@@ -505,14 +948,15 @@
                             </div>
 
                             <div class="mb-3">
-                                <label for="promptBase" class="form-label">Sujet de la question (prompt)</label>
+                                <label for="promptBase" class="form-label">Recette à générer (prompt)</label>
                                 <select id="promptBase" class="form-select" required>
-                                    <option value="">-- Choisissez un sujet --</option>
-                                    <option value="Qu'est-ce que l'empreinte carbone et comment est-elle calculée ?">🌍 L'empreinte carbone</option>
-                                    <option value="Comment fonctionne le marché européen du carbone (EU ETS) ?">📊 Le marché européen du carbone</option>
-                                    <option value="Quelles sont les principales sources d'énergie renouvelable et leurs caractéristiques ?">⚡ Les énergies renouvelables</option>
-                                    <option value="Quels sont les effets du changement climatique sur la biodiversité ?">🦋 Climat et biodiversité</option>
-                                    <option value="Qu'est-ce que l'économie circulaire et comment réduit-elle l'impact environnemental ?">♻️ L'économie circulaire</option>
+                                    <option value="">-- Choisissez une recette --</option>
+                                    <!-- Chaque valeur doit correspondre à une clé de rag_contexts.json -->
+                                    <option value="Donne-moi une recette de pain maison et explique le rôle de la levure dans la fermentation.">🥖 Le pain et la fermentation</option>
+                                    <option value="Donne-moi une recette de mayonnaise et explique pourquoi c'est une émulsion.">🥚 La mayonnaise, une émulsion</option>
+                                    <option value="Donne-moi une recette de crème caramel et explique ce qui se passe quand le sucre caramélise.">🍮 La crème caramel</option>
+                                    <option value="Donne-moi une recette de soufflé au fromage et explique pourquoi il gonfle puis retombe.">🧀 Le soufflé au fromage</option>
+                                    <option value="Donne-moi une recette de confiture de framboises et explique pourquoi elle prend en gelée.">🍓 La confiture de framboises</option>
                                 </select>
 
                                 <!-- Toggle RAG -->
@@ -603,7 +1047,8 @@
 
 <!-- ======================= SÉLECTEUR D'ÉTAPES ======================= -->
 <div class="step-controls" id="stepControls">
-    <button class="step-btn active" data-step="1">① Formulaire</button>
+    <button class="step-btn active" data-step="0">⓪ Explications</button>
+    <button class="step-btn" data-step="1">① Formulaire</button>
     <button class="step-btn" data-step="2">② Réponses</button>
 </div>
 
@@ -685,10 +1130,33 @@
                     <p class="rpi-tokens-per-sec text-muted">Tokens par seconde : --</p>
                     <h4 class="h6">Réponse du modèle</h4>
                     <div class="rpi-response"><em>(en attente...)</em></div>
-                    <div class="rpi-energy-cost mt-2 p-2 rounded" style="background:#f1f3f5;font-size:1.05rem;flex:0 0 auto;line-height:1.5;">
-                        <div class="rpi-energy-line fw-semibold">⚡ --</div>
-                        <div class="rpi-co2-line fw-semibold">🌍 --</div>
-                        <div class="rpi-gpt-compare mt-1 pt-1" style="border-top:1px dashed #ced4da;"></div>
+                    <div class="rpi-energy-cost mt-2 p-2 rounded">
+                        <div class="energy-grid">
+                            <div class="energy-col">
+                                <div class="energy-col-title">🍓 Ce modèle (Raspberry Pi)</div>
+                                <div class="rpi-food"></div>
+                                <div class="rpi-energy-line fw-semibold">⚡ --</div>
+                                <div class="rpi-co2-line fw-semibold">🌍 --</div>
+                            </div>
+                            <div class="energy-col energy-col-gpt">
+                                <div class="energy-col-title">🤖 ChatGPT (mêmes tokens)</div>
+                                <div class="rpi-gpt-compare"></div>
+                            </div>
+                        </div>
+                        <div class="rpi-food-chain food-chain"></div>
+                    </div>
+                    <div class="rpi-yearly mt-2 p-2 rounded">
+                        <div class="yearly-title"></div>
+                        <div class="energy-grid">
+                            <div class="energy-col">
+                                <div class="energy-col-title">🍓 Ce modèle (Raspberry Pi)</div>
+                                <div class="rpi-yearly-pi"></div>
+                            </div>
+                            <div class="energy-col energy-col-gpt">
+                                <div class="energy-col-title">🤖 ChatGPT</div>
+                                <div class="rpi-yearly-gpt"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -713,6 +1181,10 @@
             if (eLine) eLine.textContent = '⚡ calcul en cours…';
             if (eCo2) eCo2.textContent = '🌍 --';
             if (eGpt) eGpt.textContent = '';
+            block.querySelector('.rpi-food').innerHTML = '';
+            block.querySelector('.rpi-food-chain').innerHTML = '';
+            block.querySelector('.rpi-yearly-pi').innerHTML = '';
+            block.querySelector('.rpi-yearly-gpt').innerHTML = '';
         });
     }
 
@@ -728,6 +1200,182 @@
         return (wh / 1000) * CO2_FACTOR_KG_PER_KWH * 1000;
     }
 
+    // ---- Saveurs savantes : de l'aliment aux tokens ----
+    // Chaîne : aliment (kcal) → muscles → vélo-génératrice → électricité → tokens.
+    // Rendement musculaire brut d'un cycliste : ~20-25 % (le reste part en chaleur)
+    const FOOD_EFF_MUSCLE = 0.25;
+    // Vélo + génératrice : transmission (~95 %) × dynamo/électronique (~75 %)
+    const FOOD_EFF_GENERATOR = 0.70;
+    // 1 kcal = 4184 J = 1,162 Wh
+    const FOOD_WH_PER_KCAL = 4184 / 3600;
+    // Puissance mécanique d'un cycliste tranquille (W)
+    const FOOD_CYCLIST_WATTS = 80;
+    // Aliments de référence, du plus petit au plus gros : masse d'une unité (g, ordre
+    // de grandeur) × énergie pour 100 g (moyennes arrondies, table Ciqual de l'ANSES).
+    const FOODS = [
+        { icon: '🍚', one: 'grain de riz',      many: 'grains de riz',      grams: 0.02, per100g: 350 },  // cru
+        { icon: '🫐', one: 'myrtille',          many: 'myrtilles',          grams: 1.5,  per100g: 57 },
+        { icon: '🍇', one: 'grain de raisin',   many: 'grains de raisin',   grams: 5,    per100g: 70 },
+        { icon: '🍫', one: 'carré de chocolat', many: 'carrés de chocolat', grams: 5,    per100g: 540 },  // noir
+        { icon: '🍌', one: 'banane',            many: 'bananes',            grams: 120,  per100g: 90 },   // épluchée
+        { icon: '🥐', one: 'croissant',         many: 'croissants',         grams: 60,   per100g: 410 },
+        { icon: '🍕', one: 'pizza',             many: 'pizzas',             grams: 350,  per100g: 240 },
+        // Apport de référence d'un adulte (règlement UE INCO n° 1169/2011)
+        { icon: '🍽️', one: 'journée de repas', many: 'journées de repas',  kcal: 2000 },
+    ].map(f => ({ ...f, kcal: f.kcal ?? f.grams * f.per100g / 100 }));
+    // Usage annuel : nombre de prompts par jour × jours par an
+    const YEARLY_PROMPTS_PER_DAY = 50;
+    const YEARLY_DAYS = 365;
+    const YEARLY_PROMPTS = YEARLY_PROMPTS_PER_DAY * YEARLY_DAYS;
+    const BANANA = FOODS.find(f => f.one === 'banane');
+
+    // Remonte la chaîne de conversion à partir de l'énergie électrique consommée
+    function foodChain(elecWh) {
+        const mechWh = elecWh / FOOD_EFF_GENERATOR;
+        const foodWh = mechWh / FOOD_EFF_MUSCLE;
+        return {
+            elecWh,
+            mechWh,
+            foodWh,
+            heatWh: foodWh - mechWh,
+            kcal: foodWh / FOOD_WH_PER_KCAL,
+            pedalSeconds: mechWh / FOOD_CYCLIST_WATTS * 3600,
+        };
+    }
+
+    // Aliment le plus gros dont on mange au moins une unité (lecture plus parlante)
+    function pickFood(kcal) {
+        let food = FOODS[0];
+        for (const f of FOODS) if (kcal >= f.kcal) food = f;
+        return { food, count: kcal / food.kcal };
+    }
+
+    function fmtNum(x, maxDigits = 1) {
+        return x.toLocaleString('fr-FR', { maximumFractionDigits: maxDigits });
+    }
+
+    // 2 chiffres significatifs (pour les petites valeurs en Wh / kcal)
+    function fmtSig(x) {
+        return x.toLocaleString('fr-FR', { maximumSignificantDigits: 2 });
+    }
+
+    function fmtDuration(seconds) {
+        if (seconds < 60) return `${fmtNum(seconds, seconds < 10 ? 1 : 0)} s`;
+        if (seconds < 3600) {
+            const m = Math.floor(seconds / 60), s = Math.round(seconds % 60);
+            return s ? `${m} min ${s} s` : `${m} min`;
+        }
+        if (seconds >= 2 * 86400) return `${fmtNum(seconds / 86400, 0)} jours`;
+        const totalMin = Math.round(seconds / 60);
+        const h = Math.floor(totalMin / 60), m = totalMin % 60;
+        return `${h} h ${String(m).padStart(2, '0')}`;
+    }
+
+    // Énergie en Wh ou kWh selon l'ordre de grandeur
+    function fmtEnergy(wh) {
+        return wh < 1000 ? `${fmtSig(wh)} Wh` : `${fmtSig(wh / 1000)} kWh`;
+    }
+
+    // Masse de CO₂eq en mg, g ou kg selon l'ordre de grandeur
+    function fmtCo2(grams) {
+        if (grams < 1) return `${fmtSig(grams * 1000)} mgCO₂eq`;
+        if (grams < 1000) return `${fmtSig(grams)} gCO₂eq`;
+        return `${fmtSig(grams / 1000)} kgCO₂eq`;
+    }
+
+    // HTML de l'équivalent aliment : icônes répétées + nombre + kcal + pédalage.
+    // En mode compact, une seule icône sur la ligne du nombre (gain de hauteur).
+    function foodHtml(chain, compact = false) {
+        const { food, count } = pickFood(chain.kcal);
+        const n = Math.round(count);
+        const icons = n <= 10 ? food.icon.repeat(Math.max(1, n)) : `${food.icon} × ${n}`;
+        const label = count >= 2 ? food.many : food.one;
+        const countTxt = count < 10 ? fmtNum(count) : fmtNum(count, 0);
+        const head = compact
+            ? `<div class="food-count">${food.icon} ${countTxt} ${label}</div>`
+            : `<div class="food-icons">${icons}</div>` +
+              `<div class="food-count">${countTxt} ${label}</div>`;
+        return head +
+               `<div class="food-detail">${fmtSig(chain.kcal)} kcal · 🚴 ${fmtDuration(chain.pedalSeconds)} de pédalage</div>`;
+    }
+
+    // Texte « ≈ 3,6 myrtilles » pour une énergie donnée en kcal
+    function foodEquivText(kcal) {
+        const { food, count } = pickFood(kcal);
+        const label = count >= 2 ? food.many : food.one;
+        return `${fmtNum(count, count < 10 ? 1 : 0)} ${label} ${food.icon}`;
+    }
+
+    // Durée de génération de l'exemple pas à pas (onglet ⓪)
+    const EXPLAIN_EXAMPLE_SECONDS = 30;
+
+    // Remplit les valeurs [data-calc] (bloc de l'étape 1 + onglet ⓪ Explications)
+    function renderFoodExplainer() {
+        const bananaElecWh = BANANA.kcal * FOOD_WH_PER_KCAL * FOOD_EFF_MUSCLE * FOOD_EFF_GENERATOR;
+        const banana = foodChain(bananaElecWh);
+        const ex = foodChain(POWER_WATTS * EXPLAIN_EXAMPLE_SECONDS / 3600);
+        const exYearKcal = ex.kcal * YEARLY_PROMPTS;
+        const pct = (x) => `${fmtNum(x * 100)} %`;
+        const values = {
+            wh_per_kcal: fmtNum(FOOD_WH_PER_KCAL, 3),
+            banana_kcal: fmtNum(BANANA.kcal, 0),
+            banana_pi_time: fmtDuration(banana.elecWh / POWER_WATTS * 3600),
+            eff_muscle: pct(FOOD_EFF_MUSCLE),
+            eff_generator: pct(FOOD_EFF_GENERATOR),
+            loss_muscle: pct(1 - FOOD_EFF_MUSCLE),
+            loss_generator: pct(1 - FOOD_EFF_GENERATOR),
+            eff_muscle_dec: fmtNum(FOOD_EFF_MUSCLE, 2),
+            eff_generator_dec: fmtNum(FOOD_EFF_GENERATOR, 2),
+            eff_total: pct(FOOD_EFF_MUSCLE * FOOD_EFF_GENERATOR),
+            power: `${fmtNum(POWER_WATTS)} W`,
+            gpt_wh: fmtNum(GPT_WH_PER_100_TOKENS, 3),
+            co2_factor: fmtNum(CO2_FACTOR_KG_PER_KWH * 1000, 1),
+            cyclist: `${FOOD_CYCLIST_WATTS} W`,
+            year_per_day: fmtNum(YEARLY_PROMPTS_PER_DAY, 0),
+            year_days: fmtNum(YEARLY_DAYS, 0),
+            year_prompts: fmtNum(YEARLY_PROMPTS, 0),
+            ex_seconds: fmtNum(EXPLAIN_EXAMPLE_SECONDS, 0),
+            ex_elec: fmtSig(ex.elecWh),
+            ex_mech: fmtSig(ex.mechWh),
+            ex_food: fmtSig(ex.foodWh),
+            ex_heat: fmtSig(ex.heatWh),
+            ex_kcal: fmtSig(ex.kcal),
+            ex_pedal: fmtDuration(ex.pedalSeconds),
+            ex_equiv: foodEquivText(ex.kcal),
+            ex_year_kcal: fmtNum(Math.round(exYearKcal / 100) * 100, 0),
+            ex_year_equiv: foodEquivText(exYearKcal),
+        };
+        document.querySelectorAll('[data-calc]').forEach((el) => {
+            el.textContent = values[el.dataset.calc] ?? '--';
+        });
+
+        // Tableau des aliments de référence : énergie → électricité → autonomie du Pi
+        document.getElementById('explainFoodTable').innerHTML = FOODS.map((f) => {
+            const elecWh = f.kcal * FOOD_WH_PER_KCAL * FOOD_EFF_MUSCLE * FOOD_EFF_GENERATOR;
+            return `<tr>
+                <td>${f.icon} ${f.one}</td>
+                <td class="text-end">${f.grams != null ? fmtNum(f.grams, 2) + ' g' : '–'}</td>
+                <td class="text-end">${f.per100g != null ? fmtNum(f.per100g, 0) + ' kcal' : '–'}</td>
+                <td class="text-end fw-semibold">${fmtNum(f.kcal, f.kcal < 10 ? 2 : 0)} kcal</td>
+                <td class="text-end">${fmtEnergy(elecWh)}</td>
+                <td class="text-end">${fmtDuration(elecWh / POWER_WATTS * 3600)}</td>
+            </tr>`;
+        }).join('');
+    }
+    renderFoodExplainer();
+
+    document.querySelectorAll('.rpi-yearly .yearly-title').forEach((el) => {
+        el.textContent = `📅 Sur un an : ${YEARLY_PROMPTS_PER_DAY} prompts/jour × ${YEARLY_DAYS} jours`
+                       + ` = ${fmtNum(YEARLY_PROMPTS, 0)} prompts`;
+    });
+
+    // Impact cumulé sur un an (usage répété du même prompt) : aliment + énergie + CO₂
+    function yearlyHtml(singleWh) {
+        const wh = singleWh * YEARLY_PROMPTS;
+        return foodHtml(foodChain(wh), true) +
+               `<div class="fw-semibold">⚡ ${fmtEnergy(wh)} · 🌍 ${fmtCo2(whToCo2Grams(wh))}</div>`;
+    }
+
     function updateEnergyCosts(generationTimes, energyCosts, tokenCounts) {
         if (!generationTimes) return;
         for (const name of raspberries) {
@@ -736,6 +1384,10 @@
             const eLine = block.querySelector('.rpi-energy-line');
             const eCo2 = block.querySelector('.rpi-co2-line');
             const eGpt = block.querySelector('.rpi-gpt-compare');
+            const eFood = block.querySelector('.rpi-food');
+            const eChain = block.querySelector('.rpi-food-chain');
+            const eYearPi = block.querySelector('.rpi-yearly-pi');
+            const eYearGpt = block.querySelector('.rpi-yearly-gpt');
             if (!eLine) continue;
 
             const seconds = generationTimes[name];
@@ -743,6 +1395,10 @@
                 eLine.textContent = '⚡ N/A';
                 if (eCo2) eCo2.textContent = '🌍 N/A';
                 if (eGpt) eGpt.textContent = '';
+                if (eFood) eFood.innerHTML = '';
+                if (eChain) eChain.innerHTML = '';
+                if (eYearPi) eYearPi.innerHTML = '';
+                if (eYearGpt) eYearGpt.innerHTML = '';
                 continue;
             }
 
@@ -751,22 +1407,40 @@
                 ? energyCosts[name]
                 : POWER_WATTS * seconds / 3600;
             const co2mg = whToCo2Grams(wh) * 1000;
+            const chain = foodChain(wh);
+            const tokens = tokenCounts ? tokenCounts[name] : null;
 
             eLine.textContent = `⚡ ${wh.toFixed(3)} Wh`;
             if (eCo2) eCo2.textContent = `🌍 ${co2mg.toFixed(1)} mgCO₂eq`;
+            if (eFood) eFood.innerHTML = foodHtml(chain);
+            if (eYearPi) eYearPi.innerHTML = yearlyHtml(wh);
 
-            // Équivalent pour le même nombre de tokens avec un modèle GPT 5.5
+            // Détail des étapes de conversion pour cette réponse
+            if (eChain) {
+                const bananaAnswers = chain.kcal > 0 ? BANANA.kcal / chain.kcal : null;
+                eChain.innerHTML =
+                    `🍽️ ${fmtSig(chain.kcal)} kcal (${fmtSig(chain.foodWh)} Wh)` +
+                    ` → 💪 ${fmtSig(chain.mechWh)} Wh <span class="chain-loss">(🥵 ${fmtSig(chain.heatWh)} Wh de chaleur)</span>` +
+                    ` → 🚲⚡ ${fmtSig(chain.elecWh)} Wh` +
+                    ` → 📝 ${tokens ?? '--'} tokens` +
+                    (bananaAnswers ? `<br>🍌 Avec 1 banane : <strong>${fmtNum(bananaAnswers, 0)} réponses</strong> comme celle-ci` : '');
+            }
+
+            // Équivalent pour le même nombre de tokens avec ChatGPT (GPT 5.5)
             if (eGpt) {
-                const tokens = tokenCounts ? tokenCounts[name] : null;
                 if (tokens == null) {
                     eGpt.textContent = '';
+                    if (eYearGpt) eYearGpt.innerHTML = '';
                 } else {
                     const gptWh = (tokens / 100) * GPT_WH_PER_100_TOKENS;
                     const gptCo2mg = whToCo2Grams(gptWh) * 1000;
+                    const ratio = wh > 0 ? gptWh / wh : null;
                     eGpt.innerHTML =
-                        `<div class="fw-semibold">🤖 Équivalent GPT 5.5</div>` +
-                        `<div>⚡ ${gptWh.toFixed(3)} Wh</div>` +
-                        `<div>🌍 ${gptCo2mg.toFixed(1)} mgCO₂eq</div>`;
+                        foodHtml(foodChain(gptWh)) +
+                        `<div class="fw-semibold">⚡ ${gptWh.toFixed(3)} Wh</div>` +
+                        `<div class="fw-semibold">🌍 ${gptCo2mg.toFixed(1)} mgCO₂eq</div>` +
+                        (ratio ? `<div class="food-detail">× ${fmtNum(ratio)} par rapport au Raspberry Pi</div>` : '');
+                    if (eYearGpt) eYearGpt.innerHTML = yearlyHtml(gptWh);
                 }
             }
         }
@@ -1080,7 +1754,7 @@
         // Vérifier le prompt
         const promptBase = document.getElementById('promptBase');
         if (!promptBase.value) {
-            errors.push('Veuillez choisir un sujet de question');
+            errors.push('Veuillez choisir une recette');
             promptBase.classList.add('is-invalid');
         } else {
             promptBase.classList.remove('is-invalid');
@@ -1344,8 +2018,13 @@
     const dashMain = document.querySelector('.dashboard-main');
     const stepBtns = document.querySelectorAll('.step-btn');
 
+    const explainView = document.getElementById('explainView');
+
     function setStep(step) {
-        dashMain.classList.remove('step-1', 'step-2');
+        // Étape 0 : page d'explications plein écran à la place du tableau de bord
+        explainView.classList.toggle('d-none', step !== 0);
+        dashMain.classList.toggle('d-none', step === 0);
+        dashMain.classList.remove('step-0', 'step-1', 'step-2');
         dashMain.classList.add(`step-${step}`);
         stepBtns.forEach(btn => {
             btn.classList.toggle('active', parseInt(btn.dataset.step) === step);
@@ -1392,6 +2071,27 @@
         summaryEl.appendChild(qSpan);
     }
 
-    setStep(1);
+    // Carrousel des explications : met à jour le bouton de la partie affichée
+    const explainCarousel = document.getElementById('explainCarousel');
+    const explainTabs = document.querySelectorAll('.explain-tab');
+    explainCarousel.addEventListener('slide.bs.carousel', (e) => {
+        explainTabs.forEach((btn, i) => {
+            btn.classList.toggle('active', i === e.to);
+            if (i === e.to) btn.setAttribute('aria-current', 'true');
+            else btn.removeAttribute('aria-current');
+        });
+    });
+
+    // Flèches du clavier : diapositive précédente / suivante quand l'onglet ⓪ est affiché
+    document.addEventListener('keydown', (e) => {
+        if (explainView.classList.contains('d-none') || !window.bootstrap) return;
+        if (e.target instanceof Element && e.target.closest('input, select, textarea')) return;
+        const carousel = bootstrap.Carousel.getOrCreateInstance(explainCarousel);
+        if (e.key === 'ArrowLeft') carousel.prev();
+        if (e.key === 'ArrowRight') carousel.next();
+    });
+
+    // À l'ouverture de la page : onglet ⓪ Explications
+    setStep(0);
 </script>
 {% endblock %}
