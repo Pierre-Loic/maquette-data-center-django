@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -111,3 +112,12 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# « La vie d'un prompt » : déroulé entièrement simulé quand le launcher simule
+# les Raspberry Pi (mode démo, PI_SIMULATOR=1) ; sinon le prompt est envoyé au
+# vrai Pi choisi et les métriques affichées sont les vraies.
+# VIE_PROMPT_REEL=1 force le mode réel (utile pour le tester contre
+# simulator/pi_simulator.py).
+VIE_PROMPT_SIMULATION = (
+    os.environ.get("PI_SIMULATOR") == "1" and os.environ.get("VIE_PROMPT_REEL") != "1"
+)

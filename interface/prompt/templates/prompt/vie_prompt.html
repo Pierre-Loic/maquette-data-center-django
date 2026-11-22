@@ -1,0 +1,43 @@
+{% extends "salon/base_salon.html" %}
+{% load static %}
+
+{% block title %}La vie d’un prompt – MIAI × SEPEM{% endblock %}
+{% block body_class %}salon--activite salon--prompt vp-ecran vp-combine{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'prompt/css/vie_prompt.css' %}">
+{% endblock %}
+
+{% block header_center %}<h1 class="activite-titre">La vie d’un prompt</h1>{% endblock %}
+
+{% block content %}
+<div class="combo">
+  {% include "prompt/_schema.html" %}
+
+  <section class="cmd-bar" aria-label="Paramètres de la génération">
+    <div class="cmd-bloc">
+      <h2 class="cmd-lbl"><i>1</i> Question</h2>
+      <div class="seg grid2" id="questions"></div>
+    </div>
+    <div class="cmd-bloc">
+      <h2 class="cmd-lbl"><i>2</i> Raspberry Pi</h2>
+      <div class="seg" id="pis"></div>
+      <h2 class="cmd-lbl"><i>3</i> Modèle</h2>
+      <div class="seg" id="models"></div>
+    </div>
+    <button class="send" id="send" type="button"><span class="send-l">Envoyer</span>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </section>
+</div>
+
+<div id="tip" role="tooltip"></div>
+
+{{ config|json_script:"vp-config" }}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'prompt/js/vie_prompt_commun.js' %}"></script>
+<script src="{% static 'prompt/js/vie_prompt_observation.js' %}"></script>
+<script src="{% static 'prompt/js/vie_prompt_commande.js' %}"></script>
+{% endblock %}

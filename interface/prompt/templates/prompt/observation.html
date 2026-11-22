@@ -1,0 +1,28 @@
+{% extends "salon/base_salon.html" %}
+{% load static %}
+
+{% block title %}La vie d’un prompt – écran d’observation{% endblock %}
+{% block body_class %}salon--activite salon--prompt vp-ecran{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'prompt/css/vie_prompt.css' %}">
+{% endblock %}
+
+{% block header_center %}<h1 class="activite-titre">La vie d’un prompt</h1>{% endblock %}
+
+{# Écran d'affichage : ni bouton Accueil, ni retour automatique à l'accueil #}
+{% block home_button %}{% endblock %}
+{% block idle_script %}{% endblock %}
+
+{% block content %}
+{% include "prompt/_schema.html" %}
+
+<div id="tip" role="tooltip"></div>
+
+{{ config|json_script:"vp-config" }}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'prompt/js/vie_prompt_commun.js' %}"></script>
+<script src="{% static 'prompt/js/vie_prompt_observation.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,54 @@
+{# Schéma animé de la vie d'un prompt (partagé par l'écran d'observation et la page combinée) #}
+<div class="obs">
+  <div id="wrap">
+  <div id="stage">
+    <svg id="arrows" width="1200" height="560" viewBox="0 0 1200 560" aria-hidden="true"><defs id="defs"></defs></svg>
+
+    <div class="block" id="screen" data-key="screen">
+      <h2>Ordinateur de l’utilisateur</h2>
+      <div class="pk">
+        <div class="chip" data-key="c0">Pré-prompt</div>
+        <div class="chip" data-key="c1">Historique</div>
+        <div class="chip" data-key="c2">Mémoire</div>
+        <div class="chip" data-key="c3">Prompt<small id="promptTxt"></small></div>
+      </div>
+      <div class="lbl">Réponse</div>
+      <div id="answer"></div>
+    </div>
+
+    <div class="cable" id="net" data-key="net"></div>
+    <svg class="plug" style="left:296px" data-key="net" viewBox="0 0 30 48"><rect x="2" y="8" width="26" height="34" rx="4" fill="#DCE3F1" stroke="#7f93b5" stroke-width="2"/><rect x="9" y="2" width="12" height="9" rx="2" fill="#DCE3F1" stroke="#7f93b5" stroke-width="2"/><g stroke="#C8930C" stroke-width="2"><line x1="8" y1="18" x2="8" y2="36"/><line x1="13" y1="18" x2="13" y2="36"/><line x1="17" y1="18" x2="17" y2="36"/><line x1="22" y1="18" x2="22" y2="36"/></g></svg>
+    <svg class="plug" style="left:574px" data-key="net" viewBox="0 0 30 48"><rect x="2" y="8" width="26" height="34" rx="4" fill="#DCE3F1" stroke="#7f93b5" stroke-width="2"/><rect x="9" y="2" width="12" height="9" rx="2" fill="#DCE3F1" stroke="#7f93b5" stroke-width="2"/><g stroke="#C8930C" stroke-width="2"><line x1="8" y1="18" x2="8" y2="36"/><line x1="13" y1="18" x2="13" y2="36"/><line x1="17" y1="18" x2="17" y2="36"/><line x1="22" y1="18" x2="22" y2="36"/></g></svg>
+    <div class="netlbl" data-key="net"><b>Réseau</b><span>câble RJ45</span></div>
+
+    <div class="block" id="rack" data-key="rack"><h2>Maquette de data center</h2></div>
+    <div class="box" id="entry" data-key="entry"><h3>Entrée</h3><div class="s">FastAPI</div></div>
+    <div class="box" id="cpu" data-key="cpu">
+      <h3 id="cpuTitle">CPU · Pi 1</h3>
+      <div class="rd"><span>Température</span><b id="cpuT">—</b></div>
+      <div class="rd"><span>Fréquence</span><b id="cpuF">—</b></div>
+      <div class="rd"><span>Utilisation</span><b id="cpuU">—</b></div>
+      <div class="bar"><b id="cpubar"></b></div>
+    </div>
+    <div class="box" id="flash" data-key="flash"><h3>Mémoire flash</h3><div class="s" id="flashSub"></div></div>
+    <div class="box" id="ram" data-key="ram">
+      <h3>RAM</h3><div class="s" id="ramSub">vide</div>
+      <div class="rd"><span>Utilisation</span><b id="ramU">—</b></div>
+      <div class="bar"><b id="ramfill"></b></div>
+    </div>
+    <div class="box strip" id="strip" data-key="tokens"><div id="toks"></div></div>
+
+    <div class="badge" id="b3" data-key="p2">⚠ Goulot</div>
+    <div class="badge" id="b4" data-key="p3">⚠ Goulot</div>
+  </div>
+  </div>
+
+  <ol class="steps steps-obs" id="steps"></ol>
+
+  <section id="metrics">
+    <div class="tile"><div class="k">Étape</div><div class="v" id="mState">En attente</div></div>
+    <div class="tile"><div class="k">Temps</div><div class="v" id="mElapsed">—</div></div>
+    <div class="tile"><div class="k">1er token</div><div class="v" id="mFirst">—</div></div>
+    <div class="tile"><div class="k">Tokens · débit</div><div class="v" id="mRate">—</div></div>
+  </section>
+</div>
