@@ -88,20 +88,15 @@ class _FauxFlux:
         self.ferme = True
 
 
-class _FilSynchrone:
-    """Remplace threading.Thread : exécute la génération tout de suite."""
-
-    def __init__(self, target, args=(), daemon=None):
-        self.target, self.args = target, args
-
-    def start(self):
-        self.target(*self.args)
+def _synchrone(fonction, *args):
+    """Exécute la génération tout de suite (au lieu d'un fil séparé)."""
+    fonction(*args)
 
 
 @override_settings(VIE_PROMPT_SIMULATION=False)
 @mock.patch.object(reel, "AFFICHAGE_ENVOI_S", 0)
 @mock.patch.object(reel, "AFFICHAGE_TOKEN_QUESTION_S", 0)
-@mock.patch("prompt.simulation.threading.Thread", _FilSynchrone)
+@mock.patch("prompt.simulation._en_arriere_plan", _synchrone)
 class ModeReelTests(TestCase):
     def setUp(self):
         simulation.reinitialiser()

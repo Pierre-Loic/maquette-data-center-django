@@ -47,6 +47,11 @@ _etat = _etat_initial()
 _TOKEN_RE = re.compile(r"[^\W_][\w'’-]*|[^\s\w]")
 
 
+def _en_arriere_plan(fonction, *args) -> None:
+    """Lance la génération réelle sans bloquer la requête (remplacé dans les tests)."""
+    threading.Thread(target=fonction, args=args, daemon=True).start()
+
+
 def mode_simulation() -> bool:
     return settings.VIE_PROMPT_SIMULATION
 
@@ -150,7 +155,7 @@ def lancer(q: int, pi: int, model: str):
 
     if not simule:
         from . import reel
-        threading.Thread(target=reel.generer, args=(run["id"], q, pi, model, deja_charge), daemon=True).start()
+        _en_arriere_plan(reel.generer, run["id"], q, pi, model, deja_charge)
     return run
 
 

@@ -1,13 +1,79 @@
 {% extends "salon/base_salon.html" %}
+{% load static %}
 
-{% block title %}L'IA consomme combien ? – MIAI × SEPEM{% endblock %}
-{% block body_class %}salon--activite salon--energie{% endblock %}
+{% block title %}L’IA consomme combien ? – MIAI × SEPEM{% endblock %}
+{% block body_class %}salon--activite salon--energie en-page{% endblock %}
 
-{% block header_center %}<h1 class="activite-titre">L'IA consomme combien ?</h1>{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'energie/css/energie.css' %}">
+{% endblock %}
+
+{% block header_center %}<h1 class="activite-titre">L’IA consomme combien ?</h1>{% endblock %}
 
 {% block content %}
-<div class="activite-attente">
-    <span class="tuile-icone">{% include "salon/icones/energie.svg" %}</span>
-    <p>Activité en préparation</p>
+<div class="en-app">
+
+  <!-- ===== Écran 1 : paramètres ===== -->
+  <section id="ecran1" class="ecran ecran-params">
+    <div class="params">
+      <h2 class="en-lbl"><i>1</i> Choisissez une question</h2>
+      <div class="seg col" id="questions"></div>
+
+      <div class="params-ligne">
+        <div>
+          <h2 class="en-lbl"><i>2</i> Taille du modèle</h2>
+          <div class="seg" id="models"></div>
+        </div>
+        <div>
+          <h2 class="en-lbl"><i>3</i> Longueur de la réponse</h2>
+          <div class="seg" id="longueurs"></div>
+        </div>
+      </div>
+
+      <button class="send" id="send" type="button"><span class="send-l">Envoyer aux 3 Raspberry Pi</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+
+    <aside class="cote">
+      <div class="carte carte-temp">
+        <h2 class="carte-titre">Température des Raspberry Pi en direct</h2>
+        <div class="chart-box"><canvas id="chart"></canvas></div>
+        <div class="pis-live" id="pisLive"></div>
+      </div>
+      <div class="carte carte-calcul">
+        <h2 class="carte-titre">Comment on calcule ?</h2>
+        <ul class="calculs">
+          <li><b class="pastille p-pi">Raspberry Pi</b> <span><span data-v="puissance"></span> × durée de la génération</span></li>
+          <li><b class="pastille p-gpt">ChatGPT</b> <span><span data-v="gpt"></span> Wh pour 100 tokens</span></li>
+          <li><b class="pastille p-co2">CO₂</b> <span><span data-v="co2"></span> g par kWh (électricité en France)</span></li>
+        </ul>
+      </div>
+    </aside>
+  </section>
+
+  <!-- ===== Écran 2 : réponses et énergie ===== -->
+  <section id="ecran2" class="ecran ecran-reponses" hidden>
+    <div class="bandeau">
+      <div class="bandeau-q">
+        <span class="bandeau-k">Question</span>
+        <span class="bandeau-v" id="bQuestion"></span>
+      </div>
+      <span class="chip-info" id="bModel"></span>
+      <span class="chip-info" id="bLongueur"></span>
+      <span class="statut" id="bStatut"></span>
+      <button class="btn-nouveau" id="nouveau" type="button">Nouvelle question</button>
+    </div>
+    <div class="pis" id="pis"></div>
+    <p class="annee" id="annee"></p>
+  </section>
 </div>
+
+{{ config|json_script:"en-config" }}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'dashboard/vendor/chartjs/chart.umd.min.js' %}"></script>
+<script src="{% static 'dashboard/vendor/marked/marked.umd.js' %}"></script>
+<script src="{% static 'energie/js/energie.js' %}"></script>
 {% endblock %}
