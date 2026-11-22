@@ -184,6 +184,15 @@ def terminer(run_id: int) -> None:
             run["duree"] = maintenant_ms() - run["debut"]
 
 
+def oublier() -> None:
+    """Retour à l'accueil : oublie la dernière génération si elle est terminée
+    (les modèles chargés dans la RAM des Pi, eux, restent connus)."""
+    with _verrou:
+        if not _en_cours(_etat["run"], maintenant_ms()):
+            _etat["run"] = None
+        _etat["selection"] = _etat_initial()["selection"]
+
+
 def reinitialiser() -> None:
     """Remet l'état à zéro (utilisé par les tests)."""
     with _verrou:

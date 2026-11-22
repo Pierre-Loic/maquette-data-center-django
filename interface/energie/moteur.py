@@ -124,6 +124,13 @@ def mesures() -> dict:
     return {"heure": time.strftime("%H:%M:%S"), "pis": par_nom}
 
 
+def oublier() -> None:
+    """Retour à l'accueil : oublie la dernière génération si elle est terminée."""
+    with _verrou:
+        if not _en_cours(_etat["run"]):
+            _etat["run"] = None
+
+
 def reinitialiser() -> None:
     """Remet l'état à zéro (utilisé par les tests)."""
     with _verrou:

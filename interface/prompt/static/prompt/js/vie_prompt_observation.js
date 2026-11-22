@@ -255,6 +255,11 @@
     if (e.run) {
       if (e.run.id !== runId) { runId = e.run.id; demarrer(e.run); }
       planifier(e.run);
+    } else if (runId !== null) {
+      // Génération oubliée (retour à l'accueil) : schéma remis à l'état initial
+      runId = null; run = null; reset();
+      $('promptTxt').textContent = ''; $('ramSub').textContent = 'vide';
+      refresh();
     }
     apercu();
   }

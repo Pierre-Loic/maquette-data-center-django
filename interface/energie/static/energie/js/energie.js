@@ -212,6 +212,10 @@
     if (e.run && e.run.id !== runId) {
       runId = e.run.id;
       for (const nom of PIS) { reps[nom] = null; cartes[nom].querySelector('.pi-rep').scrollTop = 0; }
+    } else if (!e.run && runId !== null) {
+      // Génération oubliée (retour à l'accueil) : retour à l'écran des paramètres
+      runId = null; montrer(1);
+      $('send').disabled = false;
     }
     rendreRun();
   }

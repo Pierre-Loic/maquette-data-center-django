@@ -1,13 +1,96 @@
 {% extends "salon/base_salon.html" %}
+{% load static %}
 
-{% block title %}L'IA qui agit – MIAI × SEPEM{% endblock %}
-{% block body_class %}salon--activite salon--agentique{% endblock %}
+{% block title %}L’IA qui agit – MIAI × SEPEM{% endblock %}
+{% block body_class %}salon--activite salon--agentique ag-page{% endblock %}
 
-{% block header_center %}<h1 class="activite-titre">L'IA qui agit</h1>{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'agentique/css/agentique.css' %}">
+{% endblock %}
+
+{% block header_center %}<h1 class="activite-titre">L’IA qui agit : les agents</h1>{% endblock %}
 
 {% block content %}
-<div class="activite-attente">
-    <span class="tuile-icone">{% include "salon/icones/agentique.svg" %}</span>
-    <p>Activité en préparation</p>
+<div class="ag">
+  <div id="wrap">
+  <div id="stage">
+    <svg id="arrows" width="1200" height="560" viewBox="0 0 1200 560" aria-hidden="true"><defs id="defs"></defs></svg>
+
+    <!-- Vous -->
+    <div class="block" id="vous" data-key="vous">
+      <h2>Vous</h2>
+      <div class="lbl">Mission</div>
+      <div class="mission" id="mission">Choisissez une mission en bas de l’écran</div>
+      <div class="lbl">Réponse de l’agent</div>
+      <div id="answer"></div>
+    </div>
+
+    <!-- Agent -->
+    <div class="block" id="agent" data-key="agent">
+      <h2>Agent IA</h2>
+      <div class="s">un modèle de langage dans une boucle</div>
+    </div>
+    <div class="box" id="pensee" data-key="pensee"><span class="pensee-l">Raisonnement</span><p id="penseeTxt">…</p></div>
+    <div class="box" id="plan" data-key="plan"><h3>Plan</h3><ol id="planList"></ol></div>
+    <div class="box" id="memoire" data-key="memoire"><h3>Mémoire de travail</h3><ul id="memList"></ul></div>
+
+    <!-- Outils -->
+    <div class="block" id="outils"><h2>Outils</h2></div>
+    {% for cle, o in outils.items %}
+    <div class="box outil" id="o-{{ cle }}" data-key="{{ cle }}" data-outil="{{ cle }}">
+      <div class="outil-h"><span class="outil-ic">{% include "agentique/icones/"|add:cle|add:".svg" %}</span><h3>{{ o.nom }}</h3></div>
+      <div class="outil-call"></div>
+      <div class="outil-res">{{ o.desc }}</div>
+    </div>
+    {% endfor %}
+
+    <!-- Garde-fou : validation humaine -->
+    <div class="garde" id="garde" data-key="garde">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg>
+      <span>Validation humaine requise</span>
+    </div>
+  </div>
+  </div>
+
+  <ol class="steps" id="steps"></ol>
+
+  <section id="metrics">
+    <div class="tile"><div class="k">Étape</div><div class="v" id="mEtape">En attente</div></div>
+    <div class="tile"><div class="k">Outils appelés</div><div class="v" id="mOutils">—</div></div>
+    <div class="tile"><div class="k">Actions</div><div class="v" id="mActions">—</div></div>
+    <div class="tile"><div class="k">Temps</div><div class="v" id="mTemps">—</div></div>
+  </section>
+
+  <section class="cmd-bar" aria-label="Paramètres de la mission">
+    <div class="cmd-bloc">
+      <h2 class="cmd-lbl"><i>1</i> Mission</h2>
+      <div class="seg" id="missions"></div>
+    </div>
+    <div class="cmd-bloc">
+      <h2 class="cmd-lbl"><i>2</i> Autonomie de l’agent</h2>
+      <div class="seg" id="autonomies"></div>
+    </div>
+    <div class="cmd-action">
+      <button class="send" id="send" type="button"><span class="send-l">Lancer l’agent</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="valid" id="valid" hidden>
+        <p class="valid-q">L’agent veut :</p>
+        <p class="valid-a" id="validAction"></p>
+        <div class="valid-b">
+          <button class="ok" id="btnOk" type="button">Valider</button>
+          <button class="ko" id="btnKo" type="button">Refuser</button>
+        </div>
+      </div>
+    </div>
+  </section>
 </div>
+
+<div id="tip" role="tooltip"></div>
+
+{{ config|json_script:"ag-config" }}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'agentique/js/agentique.js' %}"></script>
 {% endblock %}
