@@ -1,0 +1,58 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}MIAI × SEPEM{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <link rel="stylesheet" href="{% static 'salon/css/salon.css' %}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="salon {% block body_class %}{% endblock %}">
+
+<header class="salon-header">
+    <a href="{% url 'salon:accueil' %}" class="salon-logo salon-logo--miai" aria-label="Accueil">
+        <img src="{% static 'dashboard/images/miai.png' %}" alt="EFELIA MIAI – Cluster IA">
+    </a>
+
+    {% block header_center %}{% endblock %}
+
+    <div class="salon-logo salon-logo--sepem">
+        <img src="{% static 'dashboard/images/SEPEM-GRENOBLE.png' %}" alt="SEPEM Grenoble 2026">
+    </div>
+</header>
+
+<main class="salon-main">
+    {% block content %}{% endblock %}
+</main>
+
+{% block home_button %}
+<a href="{% url 'salon:accueil' %}" class="salon-home-btn" aria-label="Retour à l'accueil">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5M5.5 9.5V20h4.5v-6h4v6h4.5V9.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span>Accueil</span>
+</a>
+{% endblock %}
+
+{% block idle_script %}
+<script>
+    // Retour automatique à l'accueil après une période d'inactivité
+    // (évite qu'un visiteur trouve l'écran au milieu d'une activité abandonnée).
+    (function () {
+        const IDLE_MS = {% block idle_ms %}180000{% endblock %};
+        const HOME = "{% url 'salon:accueil' %}";
+        let timer;
+        const reset = () => {
+            clearTimeout(timer);
+            timer = setTimeout(() => { window.location.href = HOME; }, IDLE_MS);
+        };
+        ["pointerdown", "keydown", "wheel", "touchstart"].forEach(
+            ev => window.addEventListener(ev, reset, { passive: true })
+        );
+        reset();
+    })();
+</script>
+{% endblock %}
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>

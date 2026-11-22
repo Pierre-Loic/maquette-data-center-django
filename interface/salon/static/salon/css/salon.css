@@ -1,0 +1,253 @@
+/* =========================================================
+   Interface « stand de salon » (SEPEM) – écran tactile, lecture à distance
+   ========================================================= */
+
+:root {
+    /* Couleurs issues du logo EFELIA / MIAI */
+    --miai-indigo: #3F51A3;
+    --miai-orange: #F7520F;
+    /* Couleurs SEPEM */
+    --sepem-navy: #1B2250;
+    --sepem-red: #E30613;
+
+    --fond: #F4F6FB;
+    --texte: #1B2250;
+    --rayon: 28px;
+    --header-h: clamp(80px, 13vh, 140px);
+
+    /* Une couleur par activité */
+    --c-histoire: #3F51A3;
+    --c-energie: #F7520F;
+    --c-prompt: #1B9CD9;
+    --c-agentique: #2FAA4A;
+}
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html, body { height: 100%; margin: 0; }
+
+body.salon {
+    display: flex;
+    flex-direction: column;
+    background: var(--fond);
+    color: var(--texte);
+    font-family: "Montserrat", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    /* Usage tactile : pas de sélection accidentelle, pas de zoom double-tap, pas de menu contextuel */
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    overflow: hidden;
+}
+
+/* ---------- Bandeau logos ---------- */
+.salon-header {
+    flex: 0 0 auto;
+    height: var(--header-h);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2rem;
+    padding: 0 clamp(1rem, 3vw, 3rem);
+    background: #fff;
+    box-shadow: 0 4px 18px rgba(27, 34, 80, .08);
+    position: relative;
+    z-index: 2;
+}
+
+/* Liseré dégradé MIAI sous le bandeau */
+.salon-header::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 6px;
+    background: linear-gradient(90deg, var(--miai-indigo), var(--miai-orange));
+}
+
+.salon-logo { flex: 0 0 auto; display: flex; align-items: center; height: var(--header-h); }
+.salon-logo img { display: block; width: auto; max-width: none; }
+/* Le PNG MIAI a de larges marges blanches : on le grossit et on rogne les bords */
+.salon-logo--miai img { height: calc(var(--header-h) * 1.15); margin-left: calc(var(--header-h) * -0.1); }
+.salon-logo--sepem img { height: calc(var(--header-h) * 0.72); border-radius: 10px; }
+
+.activite-titre {
+    flex: 1;
+    margin: 0;
+    text-align: center;
+    font-size: clamp(1.6rem, 3.4vw, 3rem);
+    font-weight: 800;
+    color: var(--sepem-navy);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ---------- Zone principale ---------- */
+.salon-main {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(1rem, 3vh, 3rem) clamp(1rem, 4vw, 4rem);
+}
+
+/* ---------- Accueil ---------- */
+.accueil-titre {
+    margin: 0 0 clamp(1rem, 3.5vh, 2.5rem);
+    font-size: clamp(2rem, 4.2vw, 3.8rem);
+    font-weight: 800;
+    text-align: center;
+    color: var(--sepem-navy);
+    line-height: 1.1;
+}
+.accueil-titre span {
+    display: block;
+    margin-top: .4em;
+    font-size: .45em;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--miai-orange);
+    animation: pulse 2.4s ease-in-out infinite;
+}
+
+.accueil-grille {
+    width: 100%;
+    max-width: 1500px;
+    flex: 1;
+    max-height: 68vh;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    gap: clamp(1rem, 2.5vw, 2.5rem);
+}
+
+.tuile {
+    --c: var(--miai-indigo);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: .6rem;
+    padding: clamp(1rem, 2.5vh, 2rem);
+    border-radius: var(--rayon);
+    background: #fff;
+    color: var(--texte);
+    text-decoration: none;
+    text-align: center;
+    border: 4px solid transparent;
+    box-shadow: 0 10px 30px rgba(27, 34, 80, .10);
+    overflow: hidden;
+    transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+/* Bandeau de couleur en haut de chaque tuile */
+.tuile::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 12px;
+    background: var(--c);
+}
+/* Usage à la souris : le survol doit être bien visible */
+.tuile:hover {
+    border-color: var(--c);
+    transform: translateY(-6px);
+    box-shadow: 0 18px 40px color-mix(in srgb, var(--c) 25%, transparent);
+}
+.tuile:hover .tuile-icone { transform: scale(1.08); }
+.tuile-icone { transition: transform .2s ease; }
+.tuile:active {
+    transform: scale(.96);
+    box-shadow: 0 4px 12px rgba(27, 34, 80, .15);
+}
+
+.tuile--histoire  { --c: var(--c-histoire); }
+.tuile--energie   { --c: var(--c-energie); }
+.tuile--prompt    { --c: var(--c-prompt); }
+.tuile--agentique { --c: var(--c-agentique); }
+
+.tuile-icone {
+    display: grid;
+    place-items: center;
+    width: clamp(80px, 13vh, 150px);
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--c) 12%, white);
+    color: var(--c);
+}
+.tuile-icone svg { width: 62%; height: 62%; }
+
+.tuile-titre {
+    font-size: clamp(1.5rem, 2.7vw, 2.6rem);
+    font-weight: 800;
+    line-height: 1.1;
+}
+.tuile-accroche {
+    font-size: clamp(1rem, 1.6vw, 1.5rem);
+    font-weight: 500;
+    color: #5a6080;
+}
+
+/* Apparition en cascade des tuiles */
+.accueil-grille .tuile { animation: entree .5s ease-out both; }
+.accueil-grille .tuile:nth-child(2) { animation-delay: .08s; }
+.accueil-grille .tuile:nth-child(3) { animation-delay: .16s; }
+.accueil-grille .tuile:nth-child(4) { animation-delay: .24s; }
+
+/* ---------- Pages d'activité ---------- */
+.salon--histoire  { --c: var(--c-histoire); }
+.salon--energie   { --c: var(--c-energie); }
+.salon--prompt    { --c: var(--c-prompt); }
+.salon--agentique { --c: var(--c-agentique); }
+
+.activite-attente {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    font-size: clamp(1.4rem, 2.5vw, 2.2rem);
+    font-weight: 600;
+    color: #5a6080;
+}
+.activite-attente .tuile-icone { width: clamp(140px, 25vh, 260px); }
+
+/* Bouton « Accueil » flottant, toujours au même endroit */
+.salon-home-btn {
+    position: fixed;
+    left: clamp(1rem, 2vw, 2rem);
+    bottom: clamp(1rem, 2vw, 2rem);
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    min-height: 72px;
+    padding: 0 1.6rem 0 1.2rem;
+    border-radius: 999px;
+    background: var(--sepem-navy);
+    color: #fff;
+    font-size: 1.4rem;
+    font-weight: 700;
+    text-decoration: none;
+    box-shadow: 0 8px 24px rgba(27, 34, 80, .3);
+    transition: transform .15s ease;
+}
+.salon-home-btn svg { width: 38px; height: 38px; }
+.salon-home-btn:active { transform: scale(.94); }
+
+/* ---------- Animations ---------- */
+@keyframes entree {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: none; }
+}
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: .45; }
+}
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+}

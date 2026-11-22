@@ -1,0 +1,22 @@
+{% extends "salon/base_salon.html" %}
+
+{% block title %}Bienvenue – MIAI × SEPEM{% endblock %}
+{% block body_class %}salon--accueil{% endblock %}
+
+{# Pas de bouton « Accueil » ni de retour automatique sur l'accueil lui-même #}
+{% block home_button %}{% endblock %}
+{% block idle_script %}{% endblock %}
+
+{% block content %}
+<h1 class="accueil-titre">Explorez l'IA <span>choisissez une activité</span></h1>
+
+<nav class="accueil-grille">
+    {% for a in activites %}
+    <a href="{% url a.url %}" class="tuile tuile--{{ a.slug }}">
+        <span class="tuile-icone">{% include a.icone %}</span>
+        <span class="tuile-titre">{{ a.titre }}</span>
+        <span class="tuile-accroche">{{ a.accroche }}</span>
+    </a>
+    {% endfor %}
+</nav>
+{% endblock %}

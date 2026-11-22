@@ -20,6 +20,11 @@ ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
     "dashboard.apps.DashboardConfig",
+    "salon.apps.SalonConfig",
+    "histoire.apps.HistoireConfig",
+    "energie.apps.EnergieConfig",
+    "prompt.apps.PromptConfig",
+    "agentique.apps.AgentiqueConfig",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",

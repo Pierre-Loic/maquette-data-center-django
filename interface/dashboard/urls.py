@@ -13,7 +13,7 @@ from .views import (
 )
 
 urlpatterns = [
-    path("", GameView.as_view(), name="game"),
+    path("jeu/", GameView.as_view(), name="game"),
     path("fonctionnement/", HomeView.as_view(), name="fonctionnement"),
     path("classement/", LeaderboardView.as_view(), name="classement"),
     path("dialogue/", DialogueView.as_view(), name="dialogue"),
