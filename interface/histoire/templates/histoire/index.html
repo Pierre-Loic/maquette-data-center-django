@@ -1,13 +1,107 @@
 {% extends "salon/base_salon.html" %}
+{% load static %}
 
-{% block title %}L'IA à travers le temps – MIAI × SEPEM{% endblock %}
-{% block body_class %}salon--activite salon--histoire{% endblock %}
+{% block title %}La Frise de l’IA – MIAI × SEPEM{% endblock %}
+{% block body_class %}salon--activite salon--histoire frise-page{% endblock %}
 
-{% block header_center %}<h1 class="activite-titre">L'IA à travers le temps</h1>{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'histoire/css/frise.css' %}">
+{% endblock %}
+
+{% block header_center %}<h1 class="activite-titre">La Frise de l’IA</h1>{% endblock %}
 
 {% block content %}
-<div class="activite-attente">
-    <span class="tuile-icone">{% include "salon/icones/histoire.svg" %}</span>
-    <p>Activité en préparation</p>
+<div id="app" class="frise-app">
+<noscript><p>Ce jeu a besoin de JavaScript pour fonctionner.</p></noscript>
+
+<!-- Écran 1 : choix de la thématique -->
+<section id="p2" class="ecran ecran-choix" aria-labelledby="p2-title" hidden>
+  <div class="choix-intro">
+    <p class="accroche" data-t="accueilAccroche"></p>
+    <ul class="rules-mini" id="rules"></ul>
+  </div>
+  <h2 class="h2" id="p2-title" data-t="selectionTitre"></h2>
+  <div class="themes" id="themes"></div>
+  <footer class="credits">
+    <span class="credits-logos">
+      <img src="{% static 'histoire/images/logo-miai.svg' %}" alt="MIAI Cluster">
+      <img src="{% static 'histoire/images/logo-inp.svg' %}" alt="Grenoble INP">
+      <img src="{% static 'histoire/images/logo-uga.png' %}" alt="Université Grenoble Alpes">
+      <img src="{% static 'histoire/images/logo-f2030.png' %}" alt="France 2030">
+    </span>
+    <span class="credits-txt"><span data-t="piedCredit"></span> <span data-t="piedAuteurs"></span></span>
+  </footer>
+</section>
+
+<!-- Écran 2 : jeu -->
+<section id="p3" class="ecran ecran-jeu" data-t-aria="jeuRegion" hidden>
+  <div class="hud" id="hud">
+    <span class="hud-theme" id="h-theme"></span>
+    <span class="hud-timer">
+      <span class="hud-time" id="h-time" role="timer" data-t-aria="jeuTempsRestant">4:00</span>
+      <span class="hud-track"><span class="hud-bar" id="h-bar"></span></span>
+    </span>
+    <span class="hud-item"><span data-t="jeuPlacees"></span> <b id="h-ok">0</b></span>
+    <span class="hud-item"><span data-t="jeuErreurs"></span> <b id="h-err">0</b></span>
+    <button class="btn ghost hud-quit" id="quit" type="button" data-t="jeuAbandonner"></button>
+  </div>
+  <div class="zone-main">
+    <h2 class="gsub" id="g-hand-title"><span data-t="jeuTitreMain"></span> <span class="hint" id="g-hint"></span></h2>
+    <div class="grid6" id="hand" role="group" aria-labelledby="g-hand-title"></div>
+  </div>
+  <div class="frise">
+    <h2 class="gsub" data-t="jeuTitreFrise"></h2>
+    <div class="grid6 frise-slots" id="frise"></div>
+  </div>
+</section>
+
+<!-- Écran 3 : résultats -->
+<section id="p4" class="ecran ecran-res" aria-labelledby="p4-title" hidden>
+  <div class="res-gauche">
+    <div class="res-head">
+      <svg class="cup" viewBox="0 0 200 220" aria-hidden="true" focusable="false">
+        <g fill="currentColor"><path d="M55 20h90v52c0 30-20 52-45 52s-45-22-45-52z"/>
+        <path d="M55 32H28c-4 0-6 3-5 7 4 24 16 40 35 46l3-14c-12-5-20-16-23-30h17zM145 32h27c4 0 6 3 5 7-4 24-16 40-35 46l-3-14c12-5 20-16 23-30h-17z" opacity=".75"/>
+        <rect x="92" y="122" width="16" height="42" rx="3"/><path d="M70 164h60l8 24H62z"/><rect x="52" y="188" width="96" height="18" rx="4"/></g>
+        <path d="M100 48l7 15 16 2-12 11 3 16-14-8-14 8 3-16-12-11 16-2z" fill="#fff" opacity=".55"/>
+      </svg>
+      <div>
+        <h2 class="res-title" id="p4-title"></h2>
+        <p class="res-time" id="r-time"></p>
+        <p class="res-sub" id="r-sub"></p>
+      </div>
+    </div>
+    <form class="save" id="save" hidden autocomplete="off">
+      <label class="field"><span data-t="resPseudo"></span><input id="pseudo" type="text" maxlength="20" spellcheck="false"></label>
+      <button class="btn" type="submit" data-t="resEnregistrer"></button>
+    </form>
+    <p class="saved" id="saved" role="status" hidden></p>
+    <h3 class="gsub" data-t="resCartes"></h3>
+    <div class="tiles" id="solution"></div>
+    <div class="actions">
+      <button class="btn big" id="replay" type="button" data-t="resRejouer"></button>
+      <button class="btn big ghost" id="other" type="button" data-t="resAutre"></button>
+    </div>
+  </div>
+  <div class="rank-box">
+    <h3 class="gsub" data-t="resClassement"></h3>
+    <div class="chips" id="rank-chips"></div>
+    <ol class="rank" id="rank"></ol>
+  </div>
+</section>
 </div>
+
+<div id="cd" hidden aria-hidden="true"><p data-t="decompteTitre"></p><div class="n" id="cd-n">3</div></div>
+
+<dialog id="verso" aria-labelledby="vs-title">
+  <div class="dlg"><div id="vs-body"></div><div class="dlg-actions"><button class="btn" id="vs-close" type="button" data-t="fermer"></button></div></div>
+</dialog>
+<div id="live" class="sr" aria-live="polite"></div>
+
+{{ frise_config|json_script:"frise-config" }}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'histoire/js/frise_contenu.js' %}"></script>
+<script src="{% static 'histoire/js/frise.js' %}"></script>
 {% endblock %}
