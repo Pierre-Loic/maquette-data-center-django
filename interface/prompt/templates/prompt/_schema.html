@@ -39,16 +39,17 @@
     <div class="box strip" id="strip" data-key="tokens"><div id="toks"></div></div>
 
     <div class="badge" id="b3" data-key="p2">⚠ Goulot</div>
-    <div class="badge" id="b4" data-key="p3">⚠ Goulot</div>
+    <div class="badge" id="b5" data-key="p3">⚡ Tous en même temps</div>
+    <div class="badge" id="b4" data-key="p4">⚠ Un token à la fois</div>
   </div>
   </div>
 
   <ol class="steps steps-obs" id="steps"></ol>
 
   <section id="metrics">
-    <div class="tile"><div class="k">Étape</div><div class="v" id="mState">En attente</div></div>
-    <div class="tile"><div class="k">Temps</div><div class="v" id="mElapsed">—</div></div>
-    <div class="tile"><div class="k">1er token</div><div class="v" id="mFirst">—</div></div>
-    <div class="tile"><div class="k">Tokens · débit</div><div class="v" id="mRate">—</div></div>
+    <div class="narr" id="narration"><span class="narr-k">Ce qui se passe</span><p id="narrTxt">Choisissez une question, un Raspberry Pi et un modèle, puis envoyez.</p></div>
+    <div class="tile" data-key="p3"><div class="k">Lecture du prompt</div><div class="v" id="mLecture">—</div></div>
+    <div class="tile" data-key="p4"><div class="k">Génération</div><div class="v" id="mGen">—</div></div>
+    <div class="tile"><div class="k">Temps total</div><div class="v" id="mElapsed">—</div></div>
   </section>
 </div>

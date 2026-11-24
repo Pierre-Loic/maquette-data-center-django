@@ -6,21 +6,24 @@
   'use strict';
   const { CFG, COL, maintenant, getEtat, phasesA, secondes } = window.VP;
   const PHN = CFG.phases, INFO = CFG.infos, MODELS = CFG.modeles, RAMBASE = CFG.ramBase;
+  // Chaque flèche s'anime pendant une ou plusieurs étapes (s) :
+  // lecture du prompt et génération utilisent toutes deux le chemin RAM → CPU
   const ARROWS = [
-    { s: 0, d: 'M338 128H562' }, { s: 0, d: 'M608 128H654' },
-    { s: 1, d: 'M858 118H964' },
-    { s: 2, d: 'M858 440H964' },
-    { s: 3, d: 'M1065 376V234' },
-    { s: 4, d: 'M964 162H858' }, { s: 4, d: 'M654 152H608' }, { s: 4, d: 'M562 152H338' },
+    { s: [0], d: 'M338 128H562' }, { s: [0], d: 'M608 128H654' },
+    { s: [1], d: 'M858 118H964' },
+    { s: [2], d: 'M858 440H964' },
+    { s: [3, 4], d: 'M1065 376V234' },
+    { s: [4], d: 'M964 162H858' }, { s: [4], d: 'M654 152H608' }, { s: [4], d: 'M562 152H338' },
   ];
-  const NODES = { screen: [0, 4], net: [0, 4], entry: [1, 4], rack: [1, 2, 3, 4], flash: [2], ram: [2, 3], cpu: [3] };
+  const NODES = { screen: [0, 4], net: [0, 4], entry: [1, 4], rack: [1, 2, 3, 4], flash: [2], ram: [2, 3, 4], cpu: [3, 4] };
+  const NARR = CFG.narration;
   const IDLE = '#C3CBDD';
 
   const $ = id => document.getElementById(id);
   const stage = $('stage'), wrap = $('wrap'), svg = $('arrows'), defs = $('defs'), NS = 'http://www.w3.org/2000/svg';
   let st = ['idle', 'idle', 'idle', 'idle', 'idle'], timers = [], running = false;
   let run = null, runId = null, selection = null, charges = {};
-  let tokTimes = [], genStarted = false, enErreur = false, statsBloc = null;
+  let tokTimes = [], genStarted = false, enErreur = false, lecture = null, statsFin = null;
   // mesures affichées (simulées ; remplaçables par de vraies mesures avec promptTrace.setMetrics)
   const M = { cpuT: 43, cpuF: 1.5, cpuU: 3, ramU: RAMBASE, ramT: RAMBASE };
   let live = false;
@@ -35,7 +38,7 @@
   marker('mk-idle', IDLE); COL.forEach((c, i) => marker('mk' + i, c));
   const paths = ARROWS.map(a => {
     const p = document.createElementNS(NS, 'path'); p.setAttribute('d', a.d); svg.appendChild(p);
-    const h = document.createElementNS(NS, 'path'); h.setAttribute('d', a.d); h.setAttribute('class', 'hit'); h.setAttribute('data-key', 'p' + a.s); svg.appendChild(h);
+    const h = document.createElementNS(NS, 'path'); h.setAttribute('d', a.d); h.setAttribute('class', 'hit'); h.setAttribute('data-key', 'p' + Math.max(...a.s)); svg.appendChild(h);
     return p;
   });
 
@@ -88,8 +91,11 @@
 
   function refresh() {
     paths.forEach((p, k) => {
-      const s = ARROWS[k].s, v = st[s];
-      p.setAttribute('class', 'line ' + (v === 'active' ? 'active' : v === 'done' ? 'done' : v === 'skip' ? 'skip' : 'idle'));
+      const ss = ARROWS[k].s;
+      const actif = ss.filter(i => st[i] === 'active').pop(), fait = ss.filter(i => st[i] === 'done').pop();
+      const s = actif != null ? actif : fait != null ? fait : ss[0];
+      const v = actif != null ? 'active' : fait != null ? 'done' : st[ss[0]] === 'skip' ? 'skip' : 'idle';
+      p.setAttribute('class', 'line ' + v);
       if (v === 'active' || v === 'done') { p.style.stroke = COL[s]; p.style.color = COL[s]; p.setAttribute('marker-end', 'url(#mk' + s + ')'); }
       else { p.style.stroke = ''; p.style.color = ''; p.setAttribute('marker-end', 'url(#mk-idle)'); }
     });
@@ -99,9 +105,11 @@
     });
     stepBtns.forEach((b, i) => { b.classList.remove('active', 'done', 'skip'); if (st[i] !== 'idle') b.classList.add(st[i]); });
     $('b3').classList.toggle('show', st[2] === 'active');
-    $('b4').classList.toggle('show', st[3] === 'active');
-    const act = []; st.forEach((v, i) => { if (v === 'active') act.push(PHN[i]); });
-    $('mState').textContent = running ? (act.join(' + ') || '…') : (run ? (enErreur ? 'Échec' : 'Terminé') : 'En attente');
+    $('b5').classList.toggle('show', st[3] === 'active');   // lecture : tout d'un coup
+    $('b4').classList.toggle('show', st[4] === 'active');   // génération : le goulot
+    $('strip').classList.toggle('lecture', st[3] === 'active');
+    const act = st.lastIndexOf('active');
+    $('narration').style.setProperty('--nc', act >= 0 ? COL[act] : '#5a6080');
     document.body.classList.toggle('vp-en-cours', running);
   }
 
@@ -114,29 +122,93 @@
     answer.classList.toggle('deborde', answer.scrollHeight > answer.clientHeight);
   }
 
+  /* ---- bandeau « Ce qui se passe » ---- */
+  const NARR_ATTENTE = 'Choisissez une question, un Raspberry Pi et un modèle, puis envoyez.';
+  const fill = (t, v) => t.replace(/\{(\w+)\}/g, (m, k) => v[k] != null ? v[k] : m);
+  const duree = ms => ms < 1000 ? (ms / 1000).toFixed(2).replace('.', ',') + ' s' : secondes(ms);
+  function narrer(texte) {
+    const p = $('narrTxt');
+    if (p.textContent === texte) return;
+    p.textContent = texte; p.classList.remove('nouveau'); void p.offsetWidth; p.classList.add('nouveau');
+  }
+  /* Bilan final : lire (en parallèle) va bien plus vite qu'écrire (token par token) */
+  function bilan() {
+    const S = statsFin || {};
+    if (S.total_ms != null) {   // réponse reçue d'un bloc : pas de détail
+      $('mGen').textContent = '≈ ' + S.gen_tokens + ' tokens · ' + duree(S.total_ms);
+      narrer(fill(NARR.fin_sans_detail, { duree: duree(S.total_ms) }));
+      return;
+    }
+    const nL = S.prompt_tokens || (lecture && lecture.n), msL = S.prompt_ms || (lecture && lecture.ms);
+    const cache = S.prompt_cached || 0;   // tokens déjà calculés lors d'une requête précédente
+    const n = tokTimes.length;
+    const nE = S.gen_tokens || n;
+    const msE = S.gen_ms || (n > 1 ? tokTimes[n - 1] - tokTimes[0] : null);
+    if (nL && msL) $('mLecture').textContent = nL + ' tokens · ' + duree(msL) + (cache ? ' (' + cache + ' en cache)' : '');
+    if (nE && msE) $('mGen').textContent = nE + ' tokens · ' + duree(msE);
+    if (nL && cache > nL / 2 && nE && msE) {
+      // l'essentiel du prompt était en cache : une vitesse de lecture serait trompeuse
+      const nLus = nL - cache;
+      const relus = nLus > 1 ? 'seuls ' + nLus + ' tokens sur ' + nL + ' ont été relus' : 'un seul token sur ' + nL + ' a été relu';
+      narrer(fill(NARR.fin_cache, { relus, v_ecriture: fmt(nE / (msE / 1000), 1) }));
+    } else if (nL && msL && nE && msE) {
+      const vL = nL / (msL / 1000), vE = nE / (msE / 1000);
+      narrer(fill(NARR.fin, { v_lecture: Math.round(vL), v_ecriture: fmt(vE, 1), ratio: Math.max(1, Math.round(vL / vE)) }));
+    }
+  }
+
   /* ---- réception d'un événement de la génération ---- */
   function handle(e) {
     switch (e.type) {
       case 'sent':
-        running = true;
+        running = true; narrer(NARR.envoi);
         chips.forEach((c, k) => after(300 + k * 450, () => c.classList.add('lit'))); break;
-      case 'tokenized': e.tokens.forEach((t, k) => after(k * 300, () => { if (!genStarted) addTok('in', t); })); break;
-      case 'load_start': M.ramT = RAMBASE; $('ramSub').textContent = 'chargement…'; break;
+      case 'tokenized':
+        narrer(NARR.decoupage);
+        e.tokens.forEach((t, k) => after(k * 300, () => { if (!genStarted) addTok('in', t); }));
+        // le pré-prompt est lu lui aussi : il compte dans les tokens du prompt
+        if (e.n_prompt) after(e.tokens.length * 300, () => {
+          if (!genStarted) addTok('in pre', 'pré-prompt +' + Math.max(0, e.n_prompt - e.tokens.length - (e.n_cache || 0)));
+        });
+        // certains modèles ajoutent leur propre pré-prompt, invisible pour l'utilisateur
+        if (e.n_cache) after(e.tokens.length * 300 + 900, () => {
+          if (genStarted) return;
+          addTok('in cache', 'pré-prompt caché ' + e.fournisseur + ' +' + e.n_cache);
+          narrer(fill(NARR.preprompt_cache, { fournisseur: e.fournisseur, n: e.n_cache }));
+        });
+        break;
+      case 'load_start':
+        M.ramT = RAMBASE; $('ramSub').textContent = 'chargement…';
+        narrer(fill(NARR.chargement, { modele: run.model })); break;
       case 'load_progress': M.ramT = RAMBASE + MODELS[run.model].ram * e.pct / 100; break;
-      case 'loaded': M.ramT = RAMBASE + MODELS[run.model].ram; $('ramSub').textContent = run.model; break;
-      case 'load_skipped': M.ramT = RAMBASE + MODELS[run.model].ram; $('ramSub').textContent = run.model; break;
-      case 'generation_start': genStarted = true; toks.innerHTML = ''; break;
+      case 'loaded':
+        M.ramT = RAMBASE + MODELS[run.model].ram; $('ramSub').textContent = run.model;
+        if (e.duree_ms != null) narrer(fill(NARR.charge, { duree: duree(e.duree_ms) })); break;
+      case 'load_skipped':
+        M.ramT = RAMBASE + MODELS[run.model].ram; $('ramSub').textContent = run.model;
+        narrer(fill(NARR.deja_charge, { modele: run.model })); break;
+      case 'prefill_start':
+        narrer(fill(NARR.lecture, { n: e.n_prompt }));
+        $('mLecture').textContent = '≈ ' + e.n_prompt + ' tokens…'; break;
+      case 'prefill_end':
+        lecture = { n: e.n_prompt, ms: e.duree_ms };
+        $('mLecture').textContent = '≈ ' + e.n_prompt + ' tokens' + (e.duree_ms != null ? ' · ' + duree(e.duree_ms) : '');
+        break;
+      case 'generation_start':
+        genStarted = true; toks.innerHTML = '';
+        narrer(lecture && lecture.ms != null ? fill(NARR.generation, { duree: duree(lecture.ms) }) : NARR.generation_sans_duree);
+        break;
       case 'token': {
         tokTimes.push(e.tr != null ? e.tr : e.t);  // heure réelle d'arrivée (mode réel)
         const el = addTok('out', e.text);
         after(450, () => { el.className = 'tok go'; after(180, () => { el.remove(); addAns(e.text); }); });
         break;
       }
-      // Réponse reçue d'un bloc (vrais Pi) : durée réelle du calcul et nombre de tokens
-      case 'generation_end': if (e.calcul_ms != null) statsBloc = { tokens: e.tokens, ms: e.calcul_ms }; break;
+      case 'generation_end': statsFin = e.stats || null; bilan(); break;
       case 'done': running = false; break;
       case 'error': {
         running = false; enErreur = true; toks.innerHTML = '';
+        narrer('⚠ ' + e.message);
         const m = document.createElement('span'); m.className = 'erreur'; m.textContent = '⚠ ' + e.message;
         answer.appendChild(m);
         break;
@@ -147,10 +219,11 @@
   }
 
   function reset() {
-    clearTimers(); st = ['idle', 'idle', 'idle', 'idle', 'idle']; running = false; tokTimes = []; genStarted = false; enErreur = false; statsBloc = null;
+    clearTimers(); st = ['idle', 'idle', 'idle', 'idle', 'idle']; running = false; tokTimes = []; genStarted = false; enErreur = false; lecture = null; statsFin = null;
     chips.forEach(c => c.classList.remove('lit'));
     toks.innerHTML = ''; answer.innerHTML = '';
-    $('mElapsed').textContent = '—'; $('mFirst').textContent = '—'; $('mRate').textContent = '—';
+    $('mElapsed').textContent = '—'; $('mLecture').textContent = '—'; $('mGen').textContent = '—';
+    narrer(NARR_ATTENTE);
   }
 
   /* Nouvelle génération */
@@ -222,7 +295,7 @@
     if (!live) {
       const pi = running && run ? run.pi : (selection ? selection.pi : 1);
       const base = CFG.pis[pi] || 43;
-      if (st[3] === 'active') { tgt.u = 96 + Math.random() * 4; tgt.f = 2.4; tgt.t = 72; }
+      if (st[3] === 'active' || st[4] === 'active') { tgt.u = 96 + Math.random() * 4; tgt.f = 2.4; tgt.t = 72; }
       else if (st[2] === 'active') { tgt.u = 22 + Math.random() * 6; tgt.f = 1.8; tgt.t = 55; }
       else if (running) { tgt.u = 8; tgt.f = 1.5; tgt.t = 50; }
       else { tgt.u = 3; tgt.f = 1.5; tgt.t = base; }
@@ -234,18 +307,10 @@
     renderM();
     if (!run) return;
     $('mElapsed').textContent = secondes(running || run.duree === null ? Math.max(0, maintenant() - run.debut) : run.duree);
-    if (statsBloc) {
-      // Le Pi n'envoie pas les tokens un par un : le 1er token n'est pas mesurable
-      $('mFirst').textContent = '—';
-      $('mRate').textContent = '≈ ' + statsBloc.tokens + ' · ' + fmt(statsBloc.tokens / Math.max(.1, statsBloc.ms / 1000), 1) + ' tok/s';
-      return;
-    }
+    if (statsFin) return;  // valeurs finales exactes déjà affichées par bilan()
     const n = tokTimes.length;
-    if (n) {
-      const t0 = run.evenements[0].t;
-      $('mFirst').textContent = secondes(tokTimes[0] - t0);
-      $('mRate').textContent = n > 1 ? n + ' · ' + fmt((n - 1) / ((tokTimes[n - 1] - tokTimes[0]) / 1000), 1) + ' tok/s' : '1';
-    }
+    if (n > 1) $('mGen').textContent = n + ' tokens · ' + fmt((n - 1) / ((tokTimes[n - 1] - tokTimes[0]) / 1000), 1) + ' tokens/s';
+    else if (n === 1) $('mGen').textContent = '1 token';
   }, 200);
 
   window.promptTrace = {

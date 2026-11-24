@@ -65,10 +65,29 @@ def tokeniser(texte: str) -> list[str]:
     return _TOKEN_RE.findall(texte)[:14]
 
 
+def tokens_du_prompt(q: int, model: str) -> int:
+    """Nombre approximatif de tokens lus : pré-prompt + question, plus le
+    pré-prompt caché que certains modèles ajoutent eux-mêmes."""
+    from .contenu import PRE_PROMPT
+    return max(1, len(f"{PRE_PROMPT} {QUESTIONS[q]['q']}") // 4) + MODELES[model]["preprompt_cache"]
+
+
+def tokens_du_preprompt() -> int:
+    from .contenu import PRE_PROMPT
+    return max(1, len(PRE_PROMPT) // 4)
+
+
+# Durée minimale d'affichage de la lecture du prompt : en vrai elle ne prend
+# que quelques dizaines de millisecondes et serait invisible (sa durée réelle
+# est affichée dans le bandeau).
+AFFICHAGE_LECTURE_MS = 2200
+
+
 def construire_evenements(q: int, pi: int, model: str, deja_charge: bool) -> list[dict]:
     """Mode simulé : liste chronologique des événements, avec t = ms depuis l'envoi."""
     question, mod = QUESTIONS[q], MODELES[model]
     tk = tokeniser(question["q"])
+    n_prompt = tokens_du_prompt(q, model)
     ev = []
 
     def at(t, type_, **data):
@@ -79,26 +98,35 @@ def construire_evenements(q: int, pi: int, model: str, deja_charge: bool) -> lis
     T += 2600
     at(T, "received")
     T += 400
-    at(T, "tokenized", tokens=tk)
-    T += len(tk) * 300 + 600
+    at(T, "tokenized", tokens=tk, n_prompt=n_prompt, n_cache=mod["preprompt_cache"], fournisseur=mod["fournisseur"])
+    T += len(tk) * 300 + (3500 if mod["preprompt_cache"] else 900)
     if deja_charge:
         at(T, "load_skipped")
-        T += 500
+        T += 1500
     else:
         at(T, "load_start")
         for k in range(1, 21):
             at(T + k * mod["load"] / 20, "load_progress", pct=k * 5)
         T += mod["load"] + 150
-        at(T, "loaded")
-        T += 400
+        at(T, "loaded", duree_ms=mod["load"])
+        T += 1200
+    # Modèle déjà en RAM : le début du prompt (pré-prompts) est encore en cache
+    en_cache = mod["preprompt_cache"] + tokens_du_preprompt() if deja_charge else 0
+    lecture_ms = int(1000 * (n_prompt - en_cache) / mod["lecture"])
+    at(T, "prefill_start", n_prompt=n_prompt)
+    T += max(AFFICHAGE_LECTURE_MS, lecture_ms)
+    at(T, "prefill_end", n_prompt=n_prompt, duree_ms=lecture_ms)
     at(T, "generation_start")
-    T += 1500
+    T += 300
+    debut_gen = T
+    pas = 1000 / mod["ecriture"]
     for k, tok in enumerate(question["a"]):
         at(T, "token", text=tok, index=k)
-        T += mod["tok"] + (k % 3) * 110
-    T += 200
-    at(T, "generation_end")
-    T += 1100
+        T += pas * (0.85 + 0.15 * (k % 3))   # léger irrégularité, comme sur un vrai Pi
+    gen_ms = int(T - debut_gen)
+    at(T, "generation_end", stats={"prompt_tokens": n_prompt, "prompt_cached": en_cache, "prompt_ms": lecture_ms,
+                                    "gen_tokens": len(question["a"]), "gen_ms": gen_ms})
+    T += 1500
     at(T, "done")
     return ev
 

@@ -4,8 +4,8 @@
 window.VP = (function () {
   'use strict';
   const CFG = JSON.parse(document.getElementById('vp-config').textContent);
-  // Couleur de chaque phase : Envoi, Arrivée, Chargement, Calcul, Affichage
-  const COL = ['#1B9CD9', '#7C5CD6', '#EE8A0B', '#E5383B', '#2FAA4A'];
+  // Couleur de chaque phase : Envoi, Découpage, Chargement, Lecture du prompt, Génération
+  const COL = ['#1B9CD9', '#7C5CD6', '#EE8A0B', '#12A38A', '#E5383B'];
 
   /* Décalage entre l'horloge du serveur et celle du navigateur,
      pour que les deux écrans affichent la même chose au même moment. */
@@ -32,10 +32,11 @@ window.VP = (function () {
   }
 
   /* État des 5 phases ('idle' | 'active' | 'done' | 'skip') après les
-     événements dont l'heure t est passée. */
+     événements dont l'heure t est passée :
+     0 Envoi · 1 Découpage en tokens · 2 Chargement du modèle ·
+     3 Lecture du prompt (prefill) · 4 Génération des tokens (decode) */
   function phasesA(evenements, ecoule) {
     const st = ['idle', 'idle', 'idle', 'idle', 'idle'];
-    let tokens = 0;
     for (const e of evenements) {
       if (e.t > ecoule) break;
       switch (e.type) {
@@ -44,10 +45,10 @@ window.VP = (function () {
         case 'load_start': st[1] = 'done'; st[2] = 'active'; break;
         case 'loaded': st[2] = 'done'; break;
         case 'load_skipped': st[1] = 'done'; st[2] = 'skip'; break;
-        case 'generation_start': st[3] = 'active'; break;
-        case 'token': if (!tokens++) st[4] = 'active'; break;
-        case 'generation_end': st[3] = 'done'; break;
-        case 'done': st[4] = 'done'; break;
+        case 'prefill_start': if (st[1] === 'active') st[1] = 'done'; st[3] = 'active'; break;
+        case 'prefill_end': st[3] = 'done'; break;
+        case 'generation_start': st[4] = 'active'; break;
+        case 'generation_end': case 'done': for (let i = 0; i < 5; i++) if (st[i] === 'active') st[i] = 'done'; break;
         case 'error': for (let i = 0; i < 5; i++) if (st[i] === 'active') st[i] = 'idle'; break;
       }
     }

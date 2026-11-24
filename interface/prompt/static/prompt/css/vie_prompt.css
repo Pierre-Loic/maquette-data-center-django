@@ -151,8 +151,8 @@
 #ramfill { background: var(--c3); }
 
 .strip { left: 660px; top: 250px; width: 380px; height: 115px; border-style: dashed; background: rgba(255, 255, 255, .7); }
-#toks { display: flex; flex-wrap: wrap; gap: 6px; }
-.tok { font-family: "DejaVu Sans Mono", ui-monospace, Menlo, Consolas, monospace; font-size: 17px; padding: 3px 9px; border-radius: 7px; border: 2px solid; animation: vp-pop .25s ease-out; }
+#toks { display: flex; flex-wrap: wrap; gap: 5px; }
+.tok { font-family: "DejaVu Sans Mono", ui-monospace, Menlo, Consolas, monospace; font-size: 16px; padding: 2px 8px; border-radius: 7px; border: 2px solid; animation: vp-pop .25s ease-out; }
 .tok.in { border-color: var(--c2); background: color-mix(in srgb, var(--c2) 15%, white); }
 .tok.out { border-color: var(--c4); background: color-mix(in srgb, var(--c4) 15%, white); }
 .tok.go { border-color: var(--c5); background: color-mix(in srgb, var(--c5) 20%, white); }
@@ -160,11 +160,27 @@
 .badge { position: absolute; z-index: 6; padding: 5px 10px; border-radius: 10px; font-size: 15px; font-weight: 800; opacity: 0; transform: translateY(6px); transition: all .4s; border: 2px solid; pointer-events: none; }
 .badge.show { opacity: 1; transform: none; pointer-events: auto; }
 #b3 { left: 862px; top: 394px; color: var(--c3); border-color: var(--c3); background: color-mix(in srgb, var(--c3) 12%, white); }
-#b4 { left: 1076px; top: 268px; color: var(--c4); border-color: var(--c4); background: color-mix(in srgb, var(--c4) 12%, white); }
+#b4 { left: 1076px; top: 268px; color: #E5383B; border-color: #E5383B; background: color-mix(in srgb, #E5383B 12%, white); }
+#b4, #b5 { width: 100px; text-align: center; font-size: 14px; line-height: 1.2; }
+#b5 { left: 1076px; top: 268px; color: #12A38A; border-color: #12A38A; background: color-mix(in srgb, #12A38A 12%, white); }
+/* Lecture du prompt : tous les tokens du prompt sont traités en même temps */
+.strip.lecture { border-color: #12A38A; border-style: solid; }
+.strip.lecture .tok { border-color: #12A38A; background: color-mix(in srgb, #12A38A 22%, white); animation: vp-lecture .9s ease-in-out infinite; }
+@keyframes vp-lecture { 0%, 100% { box-shadow: 0 0 0 0 rgba(18, 163, 138, .0); } 50% { box-shadow: 0 0 0 5px rgba(18, 163, 138, .35); } }
+.tok.pre { font-family: inherit; font-size: 13px; font-weight: 700; border-style: dashed; }
+/* pré-prompt caché ajouté par le fournisseur du modèle */
+.tok.cache { font-family: inherit; font-size: 13px; font-weight: 800; color: #fff; border-color: var(--sepem-navy); background: var(--sepem-navy); }
+.strip.lecture .tok.cache { background: var(--sepem-navy); color: #fff; border-color: #12A38A; }
 
 .steps-obs { justify-content: center; }
 .steps-obs .step { flex: 1; justify-content: center; font-size: clamp(1rem, 1.3vw, 1.3rem); }
-#metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+#metrics { display: grid; grid-template-columns: minmax(0, 2.4fr) repeat(3, minmax(0, 1fr)); gap: 12px; }
+/* Bandeau « Ce qui se passe » : une phrase par étape, avec les vraies mesures */
+.narr { --nc: #5a6080; display: flex; flex-direction: column; justify-content: center; padding: 6px 16px; border-radius: 14px; border: 3px solid var(--nc); background: color-mix(in srgb, var(--nc) 8%, white); transition: border-color .4s, background .4s; }
+.narr-k { font-size: 12px; text-transform: uppercase; letter-spacing: .8px; font-weight: 800; color: var(--nc); }
+.narr p { margin: 2px 0 0; font-size: clamp(16px, 1.35vw, 22px); font-weight: 800; line-height: 1.25; color: var(--ink); }
+.narr p.nouveau { animation: vp-narr .5s ease-out; }
+@keyframes vp-narr { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .tile { background: var(--panel); border: 2px solid var(--line); border-radius: 14px; padding: 8px 16px; }
 .tile .k { font-size: 12px; text-transform: uppercase; letter-spacing: .8px; color: var(--quiet); font-weight: 700; }
 .tile .v { font-size: clamp(18px, 2vw, 28px); font-weight: 800; margin-top: 2px; font-variant-numeric: tabular-nums; color: var(--ink); }

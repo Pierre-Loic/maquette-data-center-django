@@ -7,7 +7,7 @@ from django.views.decorators.http import require_GET, require_POST
 from django.views.generic import TemplateView
 
 from . import reel, simulation
-from .contenu import INFOS, MODELES, PHASES, PIS, QUESTIONS, RAM_BASE
+from .contenu import INFOS, MODELES, NARRATION, PHASES, PIS, QUESTIONS, RAM_BASE
 
 
 def _config(request) -> dict:
@@ -25,6 +25,7 @@ def _config(request) -> dict:
         "ramBase": RAM_BASE,
         "phases": PHASES,
         "infos": INFOS,
+        "narration": NARRATION,
     }
 
 
