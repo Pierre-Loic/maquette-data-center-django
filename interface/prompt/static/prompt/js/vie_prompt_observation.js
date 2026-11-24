@@ -20,7 +20,7 @@
   const stage = $('stage'), wrap = $('wrap'), svg = $('arrows'), defs = $('defs'), NS = 'http://www.w3.org/2000/svg';
   let st = ['idle', 'idle', 'idle', 'idle', 'idle'], timers = [], running = false;
   let run = null, runId = null, selection = null, charges = {};
-  let tokTimes = [], genStarted = false, enErreur = false;
+  let tokTimes = [], genStarted = false, enErreur = false, statsBloc = null;
   // mesures affichées (simulées ; remplaçables par de vraies mesures avec promptTrace.setMetrics)
   const M = { cpuT: 43, cpuF: 1.5, cpuU: 3, ramU: RAMBASE, ramT: RAMBASE };
   let live = false;
@@ -132,6 +132,8 @@
         after(450, () => { el.className = 'tok go'; after(180, () => { el.remove(); addAns(e.text); }); });
         break;
       }
+      // Réponse reçue d'un bloc (vrais Pi) : durée réelle du calcul et nombre de tokens
+      case 'generation_end': if (e.calcul_ms != null) statsBloc = { tokens: e.tokens, ms: e.calcul_ms }; break;
       case 'done': running = false; break;
       case 'error': {
         running = false; enErreur = true; toks.innerHTML = '';
@@ -145,7 +147,7 @@
   }
 
   function reset() {
-    clearTimers(); st = ['idle', 'idle', 'idle', 'idle', 'idle']; running = false; tokTimes = []; genStarted = false; enErreur = false;
+    clearTimers(); st = ['idle', 'idle', 'idle', 'idle', 'idle']; running = false; tokTimes = []; genStarted = false; enErreur = false; statsBloc = null;
     chips.forEach(c => c.classList.remove('lit'));
     toks.innerHTML = ''; answer.innerHTML = '';
     $('mElapsed').textContent = '—'; $('mFirst').textContent = '—'; $('mRate').textContent = '—';
@@ -232,6 +234,12 @@
     renderM();
     if (!run) return;
     $('mElapsed').textContent = secondes(running || run.duree === null ? Math.max(0, maintenant() - run.debut) : run.duree);
+    if (statsBloc) {
+      // Le Pi n'envoie pas les tokens un par un : le 1er token n'est pas mesurable
+      $('mFirst').textContent = '—';
+      $('mRate').textContent = '≈ ' + statsBloc.tokens + ' · ' + fmt(statsBloc.tokens / Math.max(.1, statsBloc.ms / 1000), 1) + ' tok/s';
+      return;
+    }
     const n = tokTimes.length;
     if (n) {
       const t0 = run.evenements[0].t;

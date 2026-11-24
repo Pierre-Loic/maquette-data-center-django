@@ -774,6 +774,14 @@ class ControlPanel:
 
         if result.returncode == 0:
             self.log(f"{name} ({host}) : extinction demandée.")
+        elif "Host key verification failed" in (result.stderr or ""):
+            # Le Pi a changé de clé d'identité SSH (carte SD réinstallée, autre
+            # Pi à la même adresse…) : SSH refuse la connexion par sécurité.
+            self.log(
+                f"{name} ({host}) : échec, la clé SSH du Raspberry Pi a changé "
+                f"(carte SD réinstallée ?). Si c'est bien le Pi du rack, tapez "
+                f"dans un terminal : ssh-keygen -R {host}   puis réessayez."
+            )
         else:
             detail = (result.stderr or result.stdout or "").strip().splitlines()
             detail = detail[-1] if detail else f"code {result.returncode}"

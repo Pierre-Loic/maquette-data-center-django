@@ -39,11 +39,12 @@ QUESTIONS = [
     },
 ]
 
-# Consignes ajoutées avant la question (vrais Pi) : réponse courte, pour qu'elle
-# s'affiche en quelques secondes et tienne dans le schéma.
+# Consignes ajoutées avant la question (vrais Pi) : réponse très courte, pour
+# qu'elle s'affiche vite et tienne dans le schéma.
 PRE_PROMPT = (
     "Tu es un assistant pédagogique sur un salon professionnel. "
-    "Réponds en français, en deux phrases courtes au maximum."
+    "Réponds en français, en une seule phrase très courte de 15 mots maximum, "
+    "sans liste ni mise en forme."
 )
 
 # ollama = nom exact du modèle dans Ollama sur les Raspberry Pi.
@@ -101,14 +102,14 @@ INFOS = {
            "m": "FastAPI transmet à Ollama. Une requête à la fois sur le Pi.",
            "r": "Un répartiteur choisit un serveur libre, parfois après une file d’attente."},
     "p2": {"t": "3 · Chargement", "w": "Les poids du modèle passent de la mémoire flash à la RAM. Sauté s’ils y sont déjà.",
-           "m": "Chaque Pi garde son modèle en RAM : changer de Pi ou de modèle oblige à recharger.",
+           "m": "Chaque Pi garde son modèle en RAM : changer de Pi ou de modèle oblige à recharger. Durée mesurée sur le Pi.",
            "r": "Modèles chargés en permanence dans la mémoire des accélérateurs.",
            "l": "Limite : débit de transfert flash → RAM"},
     "p3": {"t": "4 · Calcul", "w": "Le CPU lit d’abord tout le prompt, puis produit un token à la fois : chacun dépend du précédent.",
            "m": "Le CPU du Pi fait tout le calcul, d’où la lenteur.",
            "r": "GPU en parallèle sur de nombreuses requêtes : forte consommation, forte chaleur.",
            "l": "Limite : puissance de calcul du CPU (et débit de la RAM)"},
-    "p4": {"t": "5 · Affichage", "w": "Chaque token repart dès qu’il est prêt (streaming) : la réponse s’écrit mot à mot.",
-           "m": "Ollama, FastAPI, Django puis navigateur se relaient en flux continu.",
+    "p4": {"t": "5 · Affichage", "w": "La réponse repart vers l’ordinateur et s’affiche mot à mot.",
+           "m": "Le Pi renvoie la réponse complète d’un bloc ; elle est affichée mot à mot pour la lire facilement.",
            "r": "Même principe, d’où l’effet « quelqu’un écrit en direct »."},
 }

@@ -96,52 +96,78 @@ def _synchrone(fonction, *args):
 @override_settings(VIE_PROMPT_SIMULATION=False)
 @mock.patch.object(reel, "AFFICHAGE_ENVOI_S", 0)
 @mock.patch.object(reel, "AFFICHAGE_TOKEN_QUESTION_S", 0)
+@mock.patch.object(reel, "AFFICHAGE_MOT_S", 0)
 @mock.patch("prompt.simulation._en_arriere_plan", _synchrone)
 class ModeReelTests(TestCase):
     def setUp(self):
         simulation.reinitialiser()
 
-    def lancer(self, **data):
-        return self.client.post(reverse("prompt:api_lancer"), json.dumps(data), content_type="application/json")
+    def lancer(self, joignable=True, **data):
+        with mock.patch("prompt.reel.metriques", return_value={"ok": joignable}):
+            return self.client.post(reverse("prompt:api_lancer"), json.dumps(data), content_type="application/json")
 
     def types(self):
         return [e["type"] for e in simulation.etat()["run"]["evenements"]]
 
-    def test_envoi_au_bon_pi_avec_le_bon_modele(self):
-        flux = _FauxFlux([{"response": "Oui", "done": False}, {"response": ", souvent.", "done": False},
-                          {"response": "", "done": True, "eval_count": 2}])
-        with mock.patch("prompt.reel.requests.post", return_value=flux) as post:
+    def texte(self):
+        return "".join(e["text"] for e in simulation.etat()["run"]["evenements"] if e["type"] == "token")
+
+    def test_reponse_en_bloc_des_vrais_pi(self):
+        """Les Pi renvoient la réponse complète d'un bloc : chargement puis calcul
+        sont deux requêtes distinctes, la réponse est ensuite affichée mot à mot."""
+        flux = lambda: _FauxFlux([{"device": "rpi-3", "model": "ministral-3:3b", "response": "Oui, elle peut se tromper.\n"}])
+        with mock.patch("prompt.reel.requests.post", side_effect=[flux(), flux()]) as post:
             self.assertEqual(self.lancer(q=2, pi=3, model="Ministral").status_code, 200)
-        url = post.call_args.args[0]
-        payload = post.call_args.kwargs["json"]
-        self.assertEqual(url, reel.RASPBERRIES[2]["ollama_url"])
-        self.assertEqual(payload["model"], "ministral-3:3b")
-        self.assertIn(PRE_PROMPT, payload["prompt"])
-        self.assertIn(QUESTIONS[2]["q"], payload["prompt"])
-        self.assertTrue(flux.ferme)
+        (url1,), k1 = post.call_args_list[0]
+        (url2,), k2 = post.call_args_list[1]
+        self.assertEqual(url1, reel.RASPBERRIES[2]["ollama_url"])
+        self.assertEqual(k1["json"], {"prompt": reel.PROMPT_CHARGEMENT, "model": "ministral-3:3b"})
+        self.assertEqual(url2, url1)
+        self.assertEqual(k2["json"]["model"], "ministral-3:3b")
+        self.assertIn(PRE_PROMPT, k2["json"]["prompt"])
+        self.assertIn(QUESTIONS[2]["q"], k2["json"]["prompt"])
+        self.assertEqual(self.types(), ["sent", "received", "tokenized", "load_start", "loaded", "generation_start",
+                                        "generation_end", "token", "token", "token", "token", "token", "done"])
+        fin = next(e for e in simulation.etat()["run"]["evenements"] if e["type"] == "generation_end")
+        self.assertIn("calcul_ms", fin)
+        self.assertEqual(self.texte(), "Oui, elle peut se tromper.")
         e = simulation.etat()
         self.assertFalse(e["en_cours"])
-        self.assertEqual(e["run"]["mode"], "reel")
-        self.assertEqual(self.types(), ["sent", "received", "tokenized", "load_start", "loaded",
-                                        "generation_start", "token", "token", "generation_end", "done"])
-        self.assertEqual("".join(ev["text"] for ev in e["run"]["evenements"] if ev["type"] == "token"), "Oui, souvent.")
         self.assertEqual(e["charges"][3], "Ministral")
 
+    def test_flux_token_par_token(self):
+        flux = _FauxFlux([{"response": "Oui", "done": False}, {"response": ", souvent.", "done": False},
+                          {"response": "", "done": True, "eval_count": 2}])
+        with mock.patch("prompt.reel.requests.post", return_value=flux):
+            self.lancer(q=0, pi=1, model="Gemma")
+        self.assertEqual(self.types(), ["sent", "received", "tokenized", "load_start", "loaded",
+                                        "generation_start", "token", "token", "generation_end", "done"])
+        self.assertEqual(self.texte(), "Oui, souvent.")
+        self.assertTrue(flux.ferme)
+
     def test_chargement_saute_si_meme_modele_recemment(self):
-        flux = lambda: _FauxFlux([{"response": "Ok", "done": False}, {"response": "", "done": True}])
-        with mock.patch("prompt.reel.requests.post", side_effect=[flux(), flux()]):
+        flux = lambda: _FauxFlux([{"response": "Ok."}])
+        with mock.patch("prompt.reel.requests.post", side_effect=[flux(), flux(), flux()]) as post:
             self.lancer(q=0, pi=1, model="Gemma")
             self.lancer(q=1, pi=1, model="Gemma")
+        self.assertEqual(post.call_count, 3)  # pas de requête de chargement la 2e fois
         self.assertIn("load_skipped", self.types())
         self.assertNotIn("load_start", self.types())
 
     def test_pi_injoignable(self):
-        with mock.patch("prompt.reel.requests.post", side_effect=requests.ConnectionError("non")):
-            self.lancer(q=0, pi=2, model="Gemma")
+        with mock.patch("prompt.reel.requests.post") as post:
+            self.lancer(joignable=False, q=0, pi=2, model="Gemma")
+        post.assert_not_called()
         e = simulation.etat()
         self.assertFalse(e["en_cours"])
         self.assertEqual(self.types(), ["sent", "error"])
         self.assertIn("Pi 2", e["run"]["evenements"][-1]["message"])
+
+    def test_echec_du_chargement(self):
+        with mock.patch("prompt.reel.requests.post", side_effect=requests.ConnectionError("non")):
+            self.lancer(q=0, pi=1, model="Falcon")
+        self.assertEqual(self.types()[-2:], ["load_start", "error"])
+        self.assertFalse(simulation.etat()["en_cours"])
 
     def test_erreur_ollama(self):
         with mock.patch("prompt.reel.requests.post", return_value=_FauxFlux([{"error": "model not found"}])):
@@ -158,10 +184,11 @@ class ModeReelTests(TestCase):
         self.assertEqual(self.types()[-1], "done")
 
     def test_reponse_trop_longue_coupee(self):
-        lignes = [{"response": " mot", "done": False}] * (reel.MAX_TOKENS + 50)
-        with mock.patch("prompt.reel.requests.post", return_value=_FauxFlux(lignes)):
+        long = " ".join(["mot"] * (reel.MAX_TOKENS + 30))
+        with mock.patch("prompt.reel.requests.post", return_value=_FauxFlux([{"response": long}])):
             self.lancer(q=0, pi=1, model="Gemma")
         self.assertEqual(self.types().count("token"), reel.MAX_TOKENS + 1)
+        self.assertTrue(self.texte().endswith("[…]"))
 
     def test_metriques(self):
         rep = mock.Mock(**{"json.return_value": {"temperature_c": 61.2, "ram_used_percent": 47.0,
