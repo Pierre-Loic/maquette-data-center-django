@@ -53,6 +53,53 @@
 </script>
 {% endblock %}
 
+{% block screensaver %}
+<div id="salon-veille" class="salon-veille" hidden aria-hidden="true">
+    <img src="{% static 'salon/images/veille_miai.png' %}" alt="">
+    <p class="salon-veille__invite">Touchez l’écran pour commencer</p>
+</div>
+<script>
+    // Écran de veille après 5 minutes sans aucune interaction.
+    // L'heure de la dernière interaction est conservée en sessionStorage pour que
+    // le décompte survive aux changements de page (dont le retour automatique à l'accueil).
+    (function () {
+        const DELAI_MS = 5 * 60 * 1000;
+        const CLE = "salon-derniere-activite";
+        const veille = document.getElementById("salon-veille");
+        let derniere = parseInt(sessionStorage.getItem(CLE), 10);
+        if (!(derniere <= Date.now())) derniere = Date.now();
+        let timer;
+
+        const afficher = () => {
+            veille.hidden = false;
+            requestAnimationFrame(() => veille.classList.add("is-visible"));
+        };
+        const masquer = () => {
+            veille.classList.remove("is-visible");
+            // L'overlay reste cliquable pendant le fondu : le toucher qui réveille
+            // l'écran ne déclenche pas le bouton situé dessous.
+            setTimeout(() => { if (!veille.classList.contains("is-visible")) veille.hidden = true; }, 400);
+        };
+        const planifier = () => {
+            clearTimeout(timer);
+            timer = setTimeout(afficher, Math.max(0, derniere + DELAI_MS - Date.now()));
+        };
+        const activite = () => {
+            derniere = Date.now();
+            sessionStorage.setItem(CLE, derniere);
+            if (!veille.hidden) masquer();
+            planifier();
+        };
+
+        ["pointerdown", "keydown", "wheel", "touchstart"].forEach(
+            ev => window.addEventListener(ev, activite, { passive: true, capture: true })
+        );
+        sessionStorage.setItem(CLE, derniere);
+        planifier();
+    })();
+</script>
+{% endblock %}
+
 {% block extra_js %}{% endblock %}
 </body>
 </html>

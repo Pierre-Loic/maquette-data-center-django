@@ -10,9 +10,10 @@
 
 {% block header_center %}<h1 class="activite-titre">La vie d’un prompt</h1>{% endblock %}
 
-{# Écran d'affichage : ni bouton Accueil, ni retour automatique à l'accueil #}
+{# Écran d'affichage : ni bouton Accueil, ni retour automatique à l'accueil, ni veille #}
 {% block home_button %}{% endblock %}
 {% block idle_script %}{% endblock %}
+{% block screensaver %}{% endblock %}
 
 {% block content %}
 {% include "prompt/_schema.html" %}

@@ -239,6 +239,37 @@ body.salon {
 .salon-home-btn svg { width: 38px; height: 38px; }
 .salon-home-btn:active { transform: scale(.94); }
 
+/* ---------- Écran de veille ---------- */
+.salon-veille {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: #ececec;
+    opacity: 0;
+    transition: opacity .4s ease;
+    cursor: none;
+}
+.salon-veille.is-visible { opacity: 1; }
+.salon-veille[hidden] { display: none; }
+.salon-veille img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;   /* jamais rogné : le QR code reste entier quel que soit l'écran */
+}
+.salon-veille__invite {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 4vh;
+    margin: 0;
+    text-align: center;
+    color: #3e51a1;
+    font-size: clamp(1.2rem, 2.4vw, 2.2rem);
+    font-weight: 600;
+    animation: pulse 2.4s ease-in-out infinite;
+    pointer-events: none;
+}
+
 /* ---------- Animations ---------- */
 @keyframes entree {
     from { opacity: 0; transform: translateY(24px); }
